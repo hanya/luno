@@ -1,0 +1,35 @@
+
+body
+{
+    margin-left: 1em;
+    margin-right: 1em;
+}
+
+pre
+{
+    background-color: #f0f0f0;
+    line-height: 120%;
+    padding: 4px;
+    margin-left: 0.5em;
+    margin-right: 0.5em;
+}
+
+h2
+{
+    border: 0px;
+    border-bottom: 1px solid;
+}
+
+h3
+{
+    border: 0px;
+    border-bottom: 1px solid #aaaaaa;
+    
+}
+
+p
+{
+    line-height: 120%;
+    margin-left: 0.5em;
+    margin-right: 0.5em;
+}

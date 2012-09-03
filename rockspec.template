@@ -1,0 +1,112 @@
+package = "Luno"
+version = "##VERSION##"
+source = {
+    url = "https://github.com/downloads/hanya/LUNO/luno-##VERSION##.tar.gz", 
+    md5 = "##MD5##", 
+}
+description = {
+    summary = "Lua-UNO bridge", 
+    detailed = [[
+        Bridge between Lua and UNO (aka OpenOffice API). 
+        This allows to automate the office through 
+        TCP/IP or named pipe connection by Lua.
+    ]], 
+    homepage = "https://github.com/hanya/LUNO", 
+    license = "MIT"
+}
+dependencies = {
+    "lua >= 5.1"
+}
+build = {
+    type = "make", 
+    
+    install = {
+        lua = {[""] = "src/uno.lua",}, 
+        lib = {[""] = "src/luno.so",}, 
+    }, 
+    
+    variables = {
+        LUA_DIR = "$(LUA_DIR)", 
+        LUA_INC_DIR = "$(LUA_INC_DIR)", 
+        
+        SDK_DIR = "$(SDK_DIR)", 
+        URE_DIR = "$(URE_DIR)", 
+        
+        OBJ_EXT = "o", 
+        LIB_EXT = "so", 
+        LINK_LIB_EXT = "", 
+        PS = "/", 
+        
+        LINK = "g++", 
+        
+        INC_SWITCH = "-I", 
+        LIB_SWITCH = "-L", 
+        
+        CC_INCLUDES = "-I. -I./include ", 
+        CC_OUTPUT_SWITCH = "-o ", 
+        CC_SOURCE_SWITCH = "-c ", 
+        
+        LIB_OPTIONS = "-shared", 
+        
+        LUA_LIB_SUFFIX = "$(LUA_LIB_SUFFIX)", 
+        
+        COPY = "cp", 
+        MKDIR = "mkdir -p", 
+        DEL = "rm -f", 
+        
+    }, 
+    
+    platforms = {
+        
+        linux = {
+            variables = {
+                URE_LINK_DIR = "$(URE_DIR)/lib", 
+                
+                PREFIX = "/usr/local", 
+                
+                CFLAGS = "$(CFLAGS) -Wall -fno-strict-aliasing -DUNX -DGCC -DLINUX -DCPPU_ENV=gcc3", 
+                
+                LIBS = "-L$(LUA_DIR)/lib", 
+                LINK_LIBS = "-luno_cppuhelpergcc3 -luno_cppu -luno_salhelpergcc3 -luno_sal -lm", 
+                LUA_LINK_LIB = "-llua", 
+            }, 
+        },
+        
+        win32 = {
+            install = {
+                lib = {[""] = "src/luno.dll",}, 
+            }, 
+            
+            variables = {
+                URE_LINK_DIR = "$(URE_DIR)/bin", 
+                
+                LINK = "link", 
+                
+                OBJ_EXT = "obj", 
+                LIB_EXT = "dll", 
+                LINK_LIB_EXT = "", 
+                PS = "\\", 
+                
+                PREFIX = "C:\\usr\\local", 
+                
+                CFLAGS = " /O2 /DWIN32 /DWNT /D_DLL /DCPPU_V=msci /DCPPU_ENV=msci", 
+                CC_INCLUDES = "/I. /I.\\include ", 
+                CC_OUTPUT_SWITCH = "/out:", 
+                CC_SOURCE_SWITCH = "/c:", 
+                INC_SWITCH = "/I", 
+                
+                LIB_OPTIONS = "/MAP /DEF:src\\luno.def", 
+                
+                LIBS = "/L$(LUA_DIR)/lib", 
+                LINK_LIBS = "icppuhelper.lib icppu.lib isal.lib isalhelper.lib msvcprt.lib msvcrt.lib kernal32.lib", 
+                LUA_LINK_LIB = "ilua", 
+                
+                COPY = "copy", 
+                MKDIR = "mkdir", 
+                DEL = "del", 
+                
+            }, 
+        }, 
+        
+    }
+}
