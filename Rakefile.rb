@@ -269,7 +269,7 @@ task :rock => [:header, ] do
   mkdir rockdir
   srcdest = "#{BUILD_DIR}/#{ROCK_DIR}/src"
   mkdir srcdest
-  cp ["Makefile", "LICENSE", "README.md"], rockdir
+  cp ["Makefile", "LICENSE", "README.md", "VERSION.rock"], rockdir
   cp_r "#{CPPU_INCLUDE}", rockdir
   cp_r "ldoc", rockdir
   cp_r "#{DOC_DIR}", rockdir
