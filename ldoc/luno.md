@@ -5,6 +5,7 @@ The knowledge of UNO basic required to understand well.
 
 ## Contents
 
+* [Load Module](#load-module)
 * [Type Mappings](#type-mappings)
     * [Char](#char)
     * [Type](#type)
