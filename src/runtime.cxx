@@ -1,5 +1,7 @@
-
-#include "luno.hxx"
+/*
+** See Copyright Notice in LICENSE.
+**/
+#include "imple.hxx"
 
 #ifndef TYPE_CACHED
 //#define TYPE_CACHED
@@ -10,14 +12,24 @@
 #include <osl/thread.h>
 #include <typelib/typedescription.hxx>
 
+#include <com/sun/star/reflection/XEnumTypeDescription.hpp>
+#include <com/sun/star/beans/XMaterialHolder.hpp>
+
+using com::sun::star::beans::XIntrospection;
 using com::sun::star::beans::XIntrospectionAccess;
+using com::sun::star::beans::XMaterialHolder;
 using com::sun::star::beans::XPropertySet;
+using com::sun::star::lang::XSingleServiceFactory;
 using com::sun::star::lang::XMultiComponentFactory;
 using com::sun::star::lang::XUnoTunnel;
 using com::sun::star::reflection::XIdlArray;
 using com::sun::star::reflection::XIdlClass;
+using com::sun::star::reflection::XEnumTypeDescription;
+using com::sun::star::reflection::XIdlReflection;
 using com::sun::star::script::XInvocation;
 using com::sun::star::script::XInvocation2;
+using com::sun::star::script::XInvocationAdapterFactory2;
+using com::sun::star::script::XTypeConverter;
 
 using rtl::OUString;
 using rtl::OUStringToOString;
@@ -141,10 +153,7 @@ static Sequence< Type > getTypes(lua_State *L, const int index, const Runtime &r
         lua_pushvalue(L, index);
         const int error = lua_pcall(L, 1, 1, 0);
         if (error)
-		{
-			lua_settop(L, top);
             return ret;
-		}
         
         const int type = lua_type(L, -1);
         if (type == LUA_TUSERDATA)
@@ -174,7 +183,7 @@ static Sequence< Type > getTypes(lua_State *L, const int index, const Runtime &r
     {
         ret.realloc(nLength + 1);
         ret[nLength] = getCppuType(
-                (Reference< XUnoTunnel > *)NULL);
+                (Reference< com::sun::star::lang::XUnoTunnel > *)NULL);
     }
     return ret;
 }
@@ -192,10 +201,7 @@ static Sequence< sal_Int8 > getImplementationId(lua_State *L, const int index, c
         lua_pushvalue(L, index);
         const int error = lua_pcall(L, 1, 1, 0);
         if (error)
-		{
-			lua_settop(L, top);
             return ret;
-		}
         
         if (lua_isuserdata(L, -1))
         {
@@ -363,8 +369,8 @@ void Runtime::anyToLua(lua_State *L, const Any &a) const throw (RuntimeException
         }
         case TypeClass_SEQUENCE:
         {
-            Reference< XIdlClass > xIdlClass(
-                        getImple()->xCoreReflection->forName(a.getValueTypeName()));
+            Reference< com::sun::star::reflection::XIdlClass > xIdlClass = 
+                        getImple()->xCoreReflection->forName(a.getValueTypeName());
             if (xIdlClass.is() && xIdlClass->getTypeClass() == TypeClass_SEQUENCE)
             {
                 Reference< XIdlArray > xIdlArray(xIdlClass, UNO_QUERY);

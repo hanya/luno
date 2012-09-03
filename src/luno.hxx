@@ -1,5 +1,7 @@
-
-
+/*
+** Lua-UNO Bridge.
+** See Copyright Notice in LICENSE.
+**/
 #ifndef _IMPLE_HXX
 #define _IMPLE_HXX
 

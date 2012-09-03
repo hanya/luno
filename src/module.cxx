@@ -1,4 +1,6 @@
-
+/*
+** See Copyright Notice in LICENSE.
+**/
 #include "luno.hxx"
 
 #include <string.h>
