@@ -15,6 +15,7 @@
 #include <com/sun/star/beans/MethodConcept.hpp>
 #include <com/sun/star/beans/PropertyConcept.hpp>
 #include <com/sun/star/lang/XServiceInfo.hpp>
+#include <com/sun/star/registry/InvalidRegistryException.hpp>
 #include <com/sun/star/reflection/ParamMode.hpp>
 #include <com/sun/star/reflection/XServiceConstructorDescription.hpp>
 #include <com/sun/star/reflection/XServiceTypeDescription2.hpp>
@@ -284,13 +285,28 @@ static int luno_getcontext(lua_State *L)
     }
     else
     {
+        try
+        {
 #if 0
-        const int type = luaL_optint(L, 1, 0);
-        if (type)
-            xContext = ::cppu::bootstrap();
-        else
+            const int type = luaL_optint(L, 1, 0);
+            if (type)
+                xContext = ::cppu::bootstrap();
+            else
 #endif
-            xContext = ::cppu::defaultBootstrap_InitialComponentContext();
+                xContext = ::cppu::defaultBootstrap_InitialComponentContext();
+        }
+        catch (com::sun::star::registry::InvalidRegistryException &e)
+        {
+            return luaL_error(L, OUSTRTOSTR(e.Message));
+        }
+        catch (com::sun::star::uno::Exception &e)
+        {
+            return luaL_error(L, OUSTRTOSTR(e.Message));
+        }
+        catch (...)
+        {
+            return luaL_error(L, "Error on bootstrapping");
+        }
         if (xContext.is())
         {
             try
