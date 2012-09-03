@@ -1,7 +1,7 @@
 package = "Luno"
 version = "##VERSION##"
 source = {
-    url = "https://github.com/downloads/hanya/LUNO/luno-##VERSION##.tar.gz", 
+    url = "https://github.com/downloads/hanya/luno/luno-##VERSION##.tar.gz", 
     md5 = "##MD5##", 
 }
 description = {
@@ -11,7 +11,7 @@ description = {
         This allows to automate the office through 
         TCP/IP or named pipe connection by Lua.
     ]], 
-    homepage = "https://github.com/hanya/LUNO", 
+    homepage = "https://github.com/hanya/luno", 
     license = "MIT"
 }
 dependencies = {
