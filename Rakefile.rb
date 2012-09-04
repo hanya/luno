@@ -51,6 +51,7 @@ host = c['host']
 SRC_DIR = "./src"
 BUILD_DIR = "./build"
 LIB_DIR = "./build/lib"
+LIB2_DIR = "./build/lib2"
 OBJ_DIR = "./build/obj"
 PKG_DIR = "./pkg"
 DOC_DIR = "./build/doc"
@@ -59,6 +60,7 @@ LDOC_DIR = "./ldoc"
 directory BUILD_DIR
 directory OBJ_DIR
 directory LIB_DIR
+directory LIB2_DIR
 
 
 ALL_SRCS = FileList["#{SRC_DIR}/*.cxx"]
@@ -115,6 +117,7 @@ if host.include? 'linux'
   local_link_lib = ""
   
   module_ldflags = ""
+  LINK_SWITCH = "-L"
   
   ure_types = "#{ure_home}/share/misc/types.rdb"
   
@@ -163,6 +166,7 @@ elsif host.include? 'mswin'
   local_link_lib = ""
   
   module_ldflags = ""
+  LINK_SWITCH = "/LIBPATH:"
   
   ure_types = "#{ure_home}/misc/types.rdb"
 end
@@ -238,12 +242,10 @@ task :header do
 end
 
 task :luno => [*MODULE_OBJS]  do
-  
   sh "#{link} #{link_flags} #{out_flag}#{LIB_DIR}/#{MODULE_DLL} #{ALL_OBJS.join(' ')} " + 
      " #{LIB} #{local_link_lib} #{module_ldflags} #{lua_link_lib} " + 
      " #{sdk_lib} #{ure_lib}" + 
      " #{sdk_libs} #{libs} "
-  
 end
 
 task :luno_std_mod => [*STD_MOD_OBJS] do
@@ -269,7 +271,7 @@ task :rock => [:header, ] do
   mkdir rockdir
   srcdest = "#{BUILD_DIR}/#{ROCK_DIR}/src"
   mkdir srcdest
-  cp ["Makefile", "LICENSE", "README.md", "VERSION.rock"], rockdir
+  cp ["Makefile", "Makefile.win", "LICENSE", "README.md", "VERSION.rock"], rockdir
   cp_r "#{CPPU_INCLUDE}", rockdir
   cp_r "ldoc", rockdir
   cp_r "#{DOC_DIR}", rockdir
@@ -297,7 +299,8 @@ end
 TEMPLATE_MANIFEST = <<EOD
 <?xml version="1.0" encoding="UTF-8"?>
 <manifest:manifest>
-<manifest:file-entry manifest:full-path="${LOADER}" manifest:media-type="${MEDIA_TYPE}"/>
+<manifest:file-entry manifest:full-path="${LOADER}" 
+ manifest:media-type="${MEDIA_TYPE}"/>
 </manifest:manifest>
 EOD
 
@@ -421,13 +424,13 @@ LOADER_LUA = "lualoader.lua"
 
 LOADER_PKG_DIR_NAME = "#{LOADER_PKG_NAME}-#{VERSION}"
 LOADER_PKG_FULL_NAME = "#{LOADER_PKG_NAME}-#{VERSION}.#{OXT_EXT}"
-LOADER_PKG_DIR = "#{PKG_DIR}/#{LOADER_PKG_NAME}-#{VERSION}"
-LOADER_PKG = "#{PKG_DIR}/#{LOADER_PKG_FULL_NAME}"
+LOADER_PKG_DIR = "#{BUILD_DIR}/#{LOADER_PKG_NAME}-#{VERSION}"
+LOADER_PKG = "#{BUILD_DIR}/#{LOADER_PKG_FULL_NAME}"
 
 LOADER_PKG_DIR_LIB = "#{LOADER_PKG_DIR}/lib"
-LOADER_LIB_LUNO_DLL = "#{LIB_DIR}/#{lib_dll}"
-LOADER_MODULE_DLL = "#{LIB_DIR}/#{MODULE_DLL}"
-LOADER_LIB_DLL = "#{LIB_DIR}/#{loader_dll}"
+LOADER_LIB_LUNO_DLL = "#{LIB2_DIR}/#{lib_dll}"
+LOADER_MODULE_DLL = "#{LIB2_DIR}/#{MODULE_DLL}"
+LOADER_LIB_DLL = "#{LIB2_DIR}/#{loader_dll}"
 
 directory LOADER_PKG_DIR
 directory LOADER_PKG_DIR_LIB
@@ -436,23 +439,23 @@ task :loader => [:header, LOADER_PKG]
 
 
 desc "create libluno library"
-file LOADER_LIB_LUNO_DLL => [LIB_DIR, *LIB_OBJS] do |t|
-  sh "#{link} #{out_flag}#{t.name} #{LIB_OBJS.join(' ')} " +
+file LOADER_LIB_LUNO_DLL => [LIB2_DIR, *LIB_OBJS] do |t|
+  sh "#{link} #{link_flags} #{out_flag}#{t.name} #{LIB_OBJS.join(' ')} " +
      " #{LIB} #{lib_ldflags} " +
-     " #{sdk_lib} #{ure_lib}" +
-     " #{sdk_libs} #{LIBRUBYARG} #{LIBS} "
+     " #{sdk_lib} #{ure_lib} #{lua_link_lib}" +
+     " #{sdk_libs} #{libs} "
   if host.include? 'mswin'
     sh "#{mt} -manifest #{t.name}.manifest -outputresource:#{t.name};2"
   end
 end
 
 desc "luno.so for loader"
-file LOADER_MODULE_DLL => [LIB_DIR, *MODULE_OBJS, "#{LIB_DIR}/#{lib_dll}"] do |t|
+file LOADER_MODULE_DLL => [LIB2_DIR, *MODULE_OBJS, "#{LIB2_DIR}/#{lib_dll}"] do |t|
   p "building luno.so"
-  sh "#{link} #{out_flag}#{LIB_DIR}/#{MODULE_DLL} #{MODULE_OBJS.join(' ')} " +
+  sh "#{link} #{link_flags} #{out_flag}#{LIB2_DIR}/#{MODULE_DLL} #{MODULE_OBJS.join(' ')} " +
      " #{LIB} #{local_link_lib} #{module_ldflags} " +
-     " #{sdk_lib} #{ure_lib}" +
-     " #{sdk_libs} #{LIBRUBYARG} #{LIBS} #{luno_libs}"
+     " #{sdk_lib} #{ure_lib} #{LINK_SWITCH}#{LIB2_DIR} #{lua_link_lib}" +
+     " #{sdk_libs} #{libs} #{luno_libs}"
   if host.include? 'mswin'
     sh "#{mt} -manifest #{t.name}.manifest -outputresource:#{t.name};2"
   end
@@ -460,12 +463,12 @@ end
 
 
 desc "create loader component"
-file LOADER_LIB_DLL => [LIB_DIR, *LOADER_OBJS] do |t|
+file LOADER_LIB_DLL => [LIB2_DIR, *LOADER_OBJS] do |t|
   p "building loader"
-  sh "#{link} #{out_flag}#{LIB_DIR}/#{loader_dll} #{LOADER_OBJS.join(' ')} " +
+  sh "#{link} #{link_flags} #{out_flag}#{LIB2_DIR}/#{loader_dll} #{LOADER_OBJS.join(' ')} " +
      " #{LIB} #{local_link_lib} #{ldflags} #{uno_link_flags}" +
-     " #{sdk_lib} #{ure_lib}" +
-     " #{sdk_libs} #{LIBRUBYARG} #{LIBS} #{luno_libs} "
+     " #{sdk_lib} #{ure_lib} #{LINK_SWITCH}#{LIB2_DIR} #{lua_link_lib} " +
+     " #{sdk_libs} #{libs}  #{luno_libs} "
   if host.include? 'mswin'
     sh "#{mt} -manifest #{t.name}.manifest -outputresource:#{t.name};2"
   end
@@ -476,7 +479,7 @@ file LOADER_PKG => [LOADER_PKG_DIR, "#{LOADER_PKG_DIR}/lib", LOADER_LIB_LUNO_DLL
   
   dir_path = t.name.sub(/.oxt$/, "")
   media_type = "application/vnd.sun.star.uno-components;platform=#{platform}"
-      "#{LIB_DIR}/#{loader_dll}"
+      "#{LIB2_DIR}/#{loader_dll}"
   full_path = "lib/#{LOADER_REGISTRATION}"
   
   registration_task(dir_path, LOADER_REGISTRATION,
@@ -491,7 +494,7 @@ file LOADER_PKG => [LOADER_PKG_DIR, "#{LOADER_PKG_DIR}/lib", LOADER_LIB_LUNO_DLL
   cp "#{LOADER_LIB_DLL}", "#{LOADER_PKG_DIR_LIB}/#{loader_dll}"
   
   cp "#{SRC_DIR}/#{LOADER_LUA}", "#{LOADER_PKG_DIR_LIB}/#{LOADER_LUA}"
-  cp "#{SRC_DIR}/#{UNO_RB}", "#{LOADER_PKG_DIR_LIB}/#{LIB_RB}"
+  #cp "#{SRC_DIR}/#{UNO_RB}", "#{LOADER_PKG_DIR_LIB}/#{LIB_RB}"
   
   packaging_task dir_path, File.basename(t.name)
 end
@@ -513,8 +516,8 @@ SCRIPT_RB = "luascript.lua"
 
 SCRIPT_PKG_DIR_NAME = "#{SCRIPT_PKG_NAME}-#{VERSION}"
 SCRIPT_PKG_FULL_NAME = "#{SCRIPT_PKG_NAME}-#{VERSION}.#{OXT_EXT}"
-SCRIPT_PKG_DIR = "#{PKG_DIR}/#{SCRIPT_PKG_DIR_NAME}"
-SCRIPT_PKG = "#{PKG_DIR}/#{SCRIPT_PKG_FULL_NAME}"
+SCRIPT_PKG_DIR = "#{BUILD_DIR}/#{SCRIPT_PKG_DIR_NAME}"
+SCRIPT_PKG = "#{BUILD_DIR}/#{SCRIPT_PKG_FULL_NAME}"
 
 SCRIPT_PKG_DIR_LIB = "#{SCRIPT_PKG_DIR}/lib"
 
