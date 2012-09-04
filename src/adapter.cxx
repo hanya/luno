@@ -269,7 +269,7 @@ Any LunoAdapter::invoke(const OUString &aName, const Sequence< Any > &aParams,
         const int nOut = lua_gettop(L) - top - 1;
         
         // convert return value. if nOut == -1, no return value and retAny being void.
-        if (nOut > 0)
+        if (nOut >= 0)
             retAny = runtime.luaToAny(L, -nOut -1);
         
         if (nOut > 1)
