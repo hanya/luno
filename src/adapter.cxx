@@ -215,8 +215,9 @@ Any LunoAdapter::invoke(const OUString &aName, const Sequence< Any > &aParams,
         
         Runtime runtime;
         
+        LUNO_ADAPTER_PUSH_WRAPPED(m_WrappedRef); // to reuse
         lua_pushcfunction(L, luno_gettable);
-        LUNO_ADAPTER_PUSH_WRAPPED(m_WrappedRef);
+        lua_pushvalue(L, -2); // wrapped
         lua_pushstring(L, OUSTRTOASCII(aName));
         const int e = lua_pcall(L, 2, 1, 0);
         THROW_ON_ERROR(e);
@@ -228,7 +229,8 @@ Any LunoAdapter::invoke(const OUString &aName, const Sequence< Any > &aParams,
             throw RuntimeException(
                 OUSTRCONST("Method not found: ") + aName, Reference< XInterface >());
         }
-        lua_pushvalue(L, -2); // push wrapped to first argument
+        lua_insert(L, top + 1); // wrapped - func -> func - wrapped
+        
         // push arguments
         const Any *pParams = aParams.getConstArray();
         for (int i = 0; i < nParams; ++i)
@@ -268,9 +270,8 @@ Any LunoAdapter::invoke(const OUString &aName, const Sequence< Any > &aParams,
         // ignore normal return value and wrapped obj
         const int nOut = lua_gettop(L) - top - 1;
         
-        // convert return value. if nOut == -1, no return value and retAny being void.
-        if (nOut >= 0)
-            retAny = runtime.luaToAny(L, -nOut -1);
+        if (lua_gettop(L) - top > 0)
+            retAny = runtime.luaToAny(L, top + 1);
         
         if (nOut > 1)
         {
