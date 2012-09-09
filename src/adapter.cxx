@@ -215,7 +215,8 @@ Any LunoAdapter::invoke(const OUString &aName, const Sequence< Any > &aParams,
         
         Runtime runtime;
         
-        LUNO_ADAPTER_PUSH_WRAPPED(m_WrappedRef); // to reuse
+        LUNO_ADAPTER_PUSH_WRAPPED(m_WrappedRef); // reuse
+        // find function to call with error checking
         lua_pushcfunction(L, luno_gettable);
         lua_pushvalue(L, -2); // wrapped
         lua_pushstring(L, OUSTRTOASCII(aName));
@@ -339,6 +340,7 @@ Any LunoAdapter::getValue(const OUString &aName)
 {
     CHECK_WRAPPED(m_WrappedRef);
     
+    const int top = lua_gettop(L);
     Any a;
     
     lua_pushcfunction(L, luno_gettable);
@@ -349,7 +351,15 @@ Any LunoAdapter::getValue(const OUString &aName)
     THROW_ON_ERROR(e);
     
     Runtime runtime;
-    a = runtime.luaToAny(L, -1);
+    try
+    {
+        a = runtime.luaToAny(L, -1);
+    }
+    catch (RuntimeException &e)
+    {
+        lua_settop(L, top);
+        throw;
+    }
     lua_pop(L, 1); // result
     return a;
 }

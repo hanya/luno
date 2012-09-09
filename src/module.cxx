@@ -860,7 +860,8 @@ static const luaL_Reg luno_proxy[] = {
 
 static int luno_struct_fill(lua_State *L, 
             const typelib_CompoundTypeDescription *pCompType, 
-            const Reference< XInvocation2 > &xInvocation, const Runtime &runtime, const int nArgs)
+            const Reference< XInvocation2 > &xInvocation, const Runtime &runtime, const int nArgs) 
+    throw(com::sun::star::uno::RuntimeException)
 {
     int nIndex = 0;
     if (pCompType->pBaseTypeDescription)
@@ -913,7 +914,14 @@ static int luno_struct_new(lua_State *L)
         {
             typelib_CompoundTypeDescription *pCompType = 
                     (typelib_CompoundTypeDescription *) desc.get();
-            luno_struct_fill(L, pCompType, p->xInvocation, runtime, nArgs);
+            try
+            {
+                luno_struct_fill(L, pCompType, p->xInvocation, runtime, nArgs);
+            }
+            catch (RuntimeException &e)
+            {
+                return luaL_error(L, "%s", OUSTRTOSTR(e.Message));
+            }
         }
         else
             return luaL_error(L, "unknown type name (%s)", name);
@@ -1144,9 +1152,9 @@ static int luno_any_new(lua_State *L)
             return luaL_error(L, "Illegal userdata passed");
     }
     Runtime runtime;
-    Any a = runtime.luaToAny(L, 3);
     try
     {
+        Any a = runtime.luaToAny(L, 3);
         Any result = runtime.getImple()->xTypeConverter->convertTo(a, t);
         LunoValue *p = luno_value_newudata(L);
         p->Wrapped = result;

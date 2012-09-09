@@ -405,7 +405,7 @@ void Runtime::anyToLua(lua_State *L, const Any &a) const throw (RuntimeException
 
 /** Returns converted value from Lua stack without changing the stack.
 */
-Any Runtime::luaToAny(lua_State *L, int index) const
+Any Runtime::luaToAny(lua_State *L, int index) const throw (RuntimeException)
 {
     Any a;
     switch(lua_type(L, index))
@@ -536,9 +536,11 @@ Any Runtime::luaToAny(lua_State *L, int index) const
 #endif
                     
                     if (!aTypes.getLength())
-                        luaL_error(L, "passed table does not support any UNO types");
+                        throw RuntimeException(
+                            OUSTRCONST("passed table does not support any UNO types"), Reference< XInterface >());
                     else if (!aImpleId.getLength())
-                        luaL_error(L, "passed table does not have implementataion id");
+                        throw RuntimeException(
+                            OUSTRCONST("passed table does not have implementataion id"), Reference< XInterface >());
                     // destructed when refcount reach to 0
                     pAdapted = LunoAdapter::create(L, index, aTypes, aImpleId);
                 }
@@ -557,14 +559,19 @@ Any Runtime::luaToAny(lua_State *L, int index) const
                 if (luno_get_udata_type(L, index) != LUNO_TYPE_UNDEFINED)
                     a <<= p->Wrapped;
                 else
-                    luaL_error(L, "Failed to detect the type of userdata");
+                    throw RuntimeException(
+                        OUSTRCONST("Failed to detect the type of userdata"), Reference< XInterface >());
             }
             else
-                luaL_error(L, "Illegal userdata passed");
+                throw RuntimeException(
+                    OUSTRCONST("Illegal userdata passed"), Reference< XInterface >());
             break;
         }
         default:
-            luaL_error(L, "Could not be converted to UNO value (%s)", luaL_typename(L, index));
+            const char * name = luaL_typename(L, index);
+            throw RuntimeException(
+                OUSTRCONST("Could not be converted to UNO value: ") + 
+                    OUString(name, strlen(name), RTL_TEXTENCODING_UTF8), Reference< XInterface >());
             break;
     }
     return a;

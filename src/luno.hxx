@@ -190,7 +190,7 @@ public:
     RuntimeImple *getImple() const { return imple; }
     
     void anyToLua(lua_State *L, const com::sun::star::uno::Any &a) const throw (com::sun::star::uno::RuntimeException);
-    com::sun::star::uno::Any luaToAny(lua_State *L, int index) const;
+    com::sun::star::uno::Any luaToAny(lua_State *L, int index) const throw (com::sun::star::uno::RuntimeException);
 };
 
 
