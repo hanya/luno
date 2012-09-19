@@ -1,4 +1,4 @@
-% IPC
+# IPC
 
 UNO supports inter process connection to automate it through TCP or named pipe.
 

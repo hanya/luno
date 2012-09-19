@@ -1,4 +1,4 @@
-% Basics
+# Basics
 
 This article describes about basics to use the extension. 
 The knowledge of UNO basic required to understand well.

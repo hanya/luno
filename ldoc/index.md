@@ -1,4 +1,4 @@
-% Lua-UNO Bridge
+# Lua-UNO Bridge
 
 ## Introduction
 
