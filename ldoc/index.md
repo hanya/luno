@@ -10,9 +10,9 @@ set of Lua loader and Lua script provider. If you are using standalone
 module, please read first three contents.
 
 ## Contents
-* [Basics](./luno.html)
-* [IPC](./ipc.html)
-* [Install](./install.html)
+* [Basics](./luno.md)
+* [IPC](./ipc.md)
+* [Install](./install.md)
 
 ## Reference
 
