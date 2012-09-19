@@ -423,7 +423,7 @@ The valid name is one of module, service, enum, enum value, constants group, con
 struct, and exception. When module, service, enum, or constants group is 
 requested, table is created with its name and used as container of its child elements.
 
-When module is imported, an empty table retuned which has `__newindex` as metamethod. 
+When module is imported, an empty table returned which has `__newindex` as metamethod. 
 Any member of the modules are not imported and there is no member in the table at the time. 
 Once a member of the module is requested as field access, 
 the value is imported and set to the module field, if the request is valid. 
