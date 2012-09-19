@@ -1,4 +1,4 @@
 
 # Documentation for LUNO
 
-See [./index.md](./index.md).
+See [./index.md](./ldoc/index.md).
