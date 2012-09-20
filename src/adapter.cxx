@@ -250,7 +250,9 @@ Any LunoAdapter::invoke(const OUString &aName, const Sequence< Any > &aParams,
                     if (p != NULL && p->Wrapped.getValueTypeClass() == TypeClass_EXCEPTION)
                     {
                         lua_settop(L, top);
-                        throw InvocationTargetException(OUString(), 
+                        Exception e;
+                        p->Wrapped >>= e;
+                        throw InvocationTargetException(e.Message, 
                                     Reference< XInterface >(), p->Wrapped);
                     }
                 }
