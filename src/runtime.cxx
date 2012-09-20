@@ -141,13 +141,30 @@ void Runtime::initialize(lua_State *L, const Reference< XComponentContext > &xCo
 }
 
 
+static int luno_gettable(lua_State *L)
+{
+    lua_pushvalue(L, 2);
+    lua_gettable(L, 1);
+    return 1;
+}
+
+
 static Sequence< Type > getTypes(lua_State *L, const int index, const Runtime &runtime)
 {
     const int top = lua_gettop(L);
     Sequence< Type > ret;
     
+    lua_pushcfunction(L, luno_gettable);
+    lua_pushvalue(L, index);
     lua_pushstring(L, "getTypes");
-    lua_gettable(L, index);
+    
+    const int e = lua_pcall(L, 2, 1, 0);
+    if (e)
+    {
+         lua_settop(L, top);
+         return ret;
+    }
+    
     if (lua_isfunction(L, -1))
     {
         lua_pushvalue(L, index);
@@ -194,8 +211,17 @@ static Sequence< sal_Int8 > getImplementationId(lua_State *L, const int index, c
     const int top = lua_gettop(L);
     Sequence< sal_Int8 > ret;
     
+    lua_pushcfunction(L, luno_gettable);
+    lua_pushvalue(L, index);
     lua_pushstring(L, "getImplementationId");
-    lua_gettable(L, index);
+    
+    const int e = lua_pcall(L, 2, 1, 0);
+    if (e)
+    {
+        lua_settop(L, top);
+        return ret;
+    }
+    
     if (lua_isfunction(L, -1))
     {
         lua_pushvalue(L, index);
@@ -534,7 +560,6 @@ Any Runtime::luaToAny(lua_State *L, int index) const throw (RuntimeException)
                     Sequence< Type > aTypes(getTypes(L, index, *this));
                     Sequence< sal_Int8 > aImpleId(getImplementationId(L, index, *this));
 #endif
-                    
                     if (!aTypes.getLength())
                         throw RuntimeException(
                             OUSTRCONST("passed table does not support any UNO types"), Reference< XInterface >());
@@ -557,7 +582,20 @@ Any Runtime::luaToAny(lua_State *L, int index) const throw (RuntimeException)
             if (p != NULL)
             {
                 if (luno_get_udata_type(L, index) != LUNO_TYPE_UNDEFINED)
-                    a <<= p->Wrapped;
+                {
+                    TypeClass tc = p->Wrapped.getValueTypeClass();
+                    if (tc == TypeClass_STRUCT or tc == TypeClass_EXCEPTION)
+                    {
+                        Reference< XMaterialHolder > xMaterialHolder(
+                                ((LunoAdapted *)p)->xInvocation, UNO_QUERY);
+                        if (xMaterialHolder.is())
+                            a = xMaterialHolder->getMaterial();
+                        else
+                            a = p->Wrapped;
+                    }
+                    else
+                        a = p->Wrapped;
+                }
                 else
                     throw RuntimeException(
                         OUSTRCONST("Failed to detect the type of userdata"), Reference< XInterface >());
