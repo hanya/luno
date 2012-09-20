@@ -2430,6 +2430,42 @@ static int luno_asuno(lua_State *L)
 }
 
 
+static int luno_hasinterface(lua_State *L)
+{
+    size_t length;
+    const char *name = luaL_checklstring(L, 2, &length);
+    const OUString aName(name, length, RTL_TEXTENCODING_UTF8);
+    
+    LunoAdapted *p = luno_proxy_getudata(L, 1, LUNO_META_PROXY);
+    if (p != NULL)
+    {
+        Reference< XInterface > xInterface = *(Reference < XInterface >*) p->Wrapped.getValue();
+        if (xInterface.is())
+        {
+            TypeDescription desc(aName);
+            if (desc.is())
+            {
+                typelib_TypeDescription *pTd = (typelib_TypeDescription *)desc.get();
+                if (pTd != NULL && pTd->eTypeClass == typelib_TypeClass_INTERFACE)
+                {
+                    Type type((typelib_TypeDescriptionReference *)pTd);
+                    if (xInterface->queryInterface(type).hasValue())
+                    {
+                        lua_pushboolean(L, 1);
+                        return 1;
+                    }
+                }
+            }
+            else
+            luaL_error(L, "illegal interface name (%s)", name);
+        }
+    }
+    lua_pushboolean(L, 0);
+    return 1;
+        
+}
+
+
 static const luaL_Reg luno_lib[] = {
     {"absolutize", luno_absolutize}, 
     {"tourl", luno_tourl}, 
@@ -2441,6 +2477,7 @@ static const luaL_Reg luno_lib[] = {
     {"dir", luno_dir},  // reads list of element names from __elements field
     {"name", luno_get_name}, 
     {"asuno", luno_asuno}, 
+    {"hasinterface", luno_hasinterface}, 
     {NULL, NULL}
 };
 
