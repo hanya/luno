@@ -351,7 +351,7 @@ can be called. Use `:` syntax sugar to call method on the proxy.
     local smgr = ctx:getServiceManager()
     -- this is also allowed
     local f = ctx.getServiceManager
-    local smgr2 = f()
+    local smgr2 = f(ctx)
 
 When a method has out or inout parameter, it returns multiple return values 
 in the order that real return value as first return value and then other 
