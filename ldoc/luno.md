@@ -28,9 +28,12 @@ The knowledge of UNO basic required to understand well.
     * [getcontext](#getcontext)
     * [require](#require)
     * [typename](#typename)
+    * [hasinterface](#hasinterface)
     * [dir](#dir)
     * [name](#name)
     * [asuno](#asuno)
+    * [addtypeinfo](#addtypeinfo)
+    * [addserviceinfo](#addserviceinfo)
 * [Implement Interfaces](#implement-interfaces)
 
 ## Load Module
@@ -372,6 +375,16 @@ it can be specified with full qualified name as follows:
     local ctx = self:getcontext()
     local smgr = ctx:com_sun_star_uno_XComponentContext_getServiceManager()
 
+An error "Illegal object passed" is raised, when calling a method on the object with 
+illegal object as first argument. For example: 
+
+    -- This is ok.
+    local ret1 = obj:method1()
+    -- This is wrong.
+    local ret2 = obj.method2()
+    -- It should be called with obj itself as first argument.
+    local ret3 = obj.method3(obj)
+
 #### Attributes
 
 Some interface has attribute definition. They can be accessed with its name as key.
@@ -538,6 +551,15 @@ Returns one of the following name:
 
 Other value might be returnd for value created with uno.Any depending its real content.
 
+### hasinterface
+
+Checks object has specific UNO interface.
+
+    uno.hasinterface(obj, interface)  ->  boolean
+
+`obj` should be UnoProxy and `interface` is name of UNO interface in string. 
+If `obj` is not UnoProxy or it does not support specified interface, false is returned.
+
 ### dir
 
 Lists element names of interface or struct.
@@ -579,6 +601,67 @@ programing languages except for singletons. But Lua does not have built-in
 class mechanism and the set of table and metatable is used to behave 
 class and its instantiation. 
 
+### addtypeinfo
+
+Adds methods for com.sun.star.lang.XTypeProvider interface to metatable 
+to provides type information of UNO component from `__unotypes` field value.
+
+    uno.addtypeinfo(table)  ->  table
+
+getTypes and getImplementationId methods are added to the passed table.
+
+Type (interface) information is taken from `__unoid` field of passed table. 
+Return value of getTypes method is created at first time of calling the method 
+and sequence of type is cached to `__unotypes2` field. 
+The `__unotypes` field is searched from metatable too and these type names 
+are merged.
+
+Implementation identifier is also cached to `__unoid` field.
+
+    local ActionListener = {}
+    ActionListener.__index = ActionListener
+    ActionListener.__unotypes = {
+        "com.sun.star.awt.XActionListener"
+    }
+    uno.asuno(ActionListener)
+    uno.addtypeinfo(ActionListener)
+    
+    function ActionListener:actionPerformed(ev)
+        -- do something
+    end
+    
+com.sun.star.lang.XTypeProvider is added too if not found.
+
+### addserviceinfo
+
+Adds methods for com.sun.star.lang.XServiceInfo interface to metatable 
+to provide service information of UNO component from `__implename` and 
+`__servicenames` values.
+
+    uno.addserviceinfo(table)  ->  table
+
+getImplementationName, supportsService and getSupportedServiceNames 
+methods are added to passed table.
+
+This method can be used to add com.sun.star.lang.XServiceInfo interface 
+that is almost standard interface for UNO component that is instantiated 
+through com.sun.star.lang.XMultiComponentFactory. Disposable components 
+like listener or something do not nessesary the interface.
+
+    local JobExecutor = {}
+    JobExecutor.__index = JobExecutor
+    JobExecutor.__unotypes = {
+        "com.sun.star.task.XJobExecutor", 
+    }
+    JobExecutor.__implename = "mytools.task.JobExecutor"
+    JobExecutor.__servicenames = {
+        "mytools.task.JobExecutor", 
+    }
+    uno.asuno(JobExecutor)
+    
+    function JobExecutor:trigger(arg)
+        -- do something
+    end
 
 ## Implements Interfaces
 
@@ -627,6 +710,9 @@ Here is an example to implement com.sun.star.awt.XActionListener for dialog butt
         print(ev)
         return nil
     end
+
+[`uno.addtypeinfo`](#addtypeinfo) method provides easy way to support 
+com.sun.star.lang.XTypeProvider interface on the metatable.
 
 This `ActionListener` can be used as follows:
 
