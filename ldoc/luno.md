@@ -34,6 +34,9 @@ The knowledge of UNO basic required to understand well.
     * [asuno](#asuno)
     * [addtypeinfo](#addtypeinfo)
     * [addserviceinfo](#addserviceinfo)
+    * [iterate](#iterate)
+    * [ipairs](#ipairs)
+    * [pairs](#pairs)
 * [Implement Interfaces](#implement-interfaces)
 
 ## Load Module
@@ -661,6 +664,50 @@ like listener or something do not nessesary the interface.
     
     function JobExecutor:trigger(arg)
         -- do something
+    end
+
+### iterate
+
+Iterate elements in com.sun.star.container.XEnumerationAccess or XEnumeration.
+
+    uno.iterate(object)
+
+`object` should be Proxy instance that supports XEnumerationAccess or XEnumeration 
+interface. Returned index is dummy, not related to elements of the container.
+
+    local fields = doc:getTextFields()
+    for _, v in uno.iterate(fields) do
+        print(v)
+    end
+
+### ipairs
+
+Iterate elements in com.sun.star.container.XIndexAccess.
+
+    uno.ipairs(object)
+
+`object` should be Proxy instance that supports XIndexAccess interface. 
+
+    local sheets = doc:getSheets()
+    for i, sheet in uno.ipairs(sheets) do
+        print(i)
+        print(sheet)
+    end
+
+### pairs
+
+Iterate elements in com.sun.star.container.XNameAccess interface. 
+
+    uno.pairs(object)
+
+`object` should be Proxy interface that supports XNameAccess interface. 
+This iteration returns only elements managed by index. Returned index is 
+starting with 0.
+
+    local sheets = doc:getSheets()
+    for name, sheet in uno.pairs(sheets) do
+        print(name)
+        print(sheet)
     end
 
 ## Implements Interfaces
