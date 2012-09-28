@@ -5,27 +5,23 @@ require 'rake/clean'
 require 'rubygems'
 
 luajit = true
+REPOSITORY_BASE = "https://github.com/downloads/hanya/luno/"
 
-
-VERSION = "0.1.0"
-target = "3.4"
-
-OXT_EXT = "oxt"
+#-- Commands
 
 ZIP = "zip"
 ZIP_ARGS = "-9"
 
+cat = "cat"
+
+#-- SDK and office variables
+
+TARGET_VERSION = "3.4"
+OXT_EXT = "oxt"
+
 sdk_home = ENV['OO_SDK_HOME']
 ure_home = ENV['OO_SDK_URE_HOME']
 base_path = ENV['OFFICE_BASE_PROGRAM_PATH']
-
-
-cc = "g++"
-link = "g++"
-cxx = "g++"
-
-lib_ext = ""
-obj_ext = ""
 
 CPPU_INCLUDE = './include'
 CPPUMAKER = 'cppumaker'
@@ -33,86 +29,99 @@ CPPUMAKER_FLAG = "#{CPPU_INCLUDE}/flag"
 
 sdk_include = "#{sdk_home}/include"
 
-lua_include = "/home/asuka/local/include"
-if luajit
-  lua_include = "#{lua_include}/luajit-2.0"
+#-- Lua variables
+
+LUA_DIR = ENV.include?("LUA_DIR") ? ENV["LUA_DIR"] : "./lua/installed"
+
+lua_exe = "luajit-2.0.0-beta10"
+lua_lib = nil
+
+if ENV.include?("LUA_DIR")
+  lua_include = "#{LUA_DIR}/src"
+  lua_link_lib = "#{LUA_DIR}/installed/lib"
+else
+  lua_include = "" # ToDo
+  lua_link_lib = "" # ToDo
 end
 
-c = RbConfig::CONFIG
+#-- Compiler and linker variables, would be overwritten
 
-CFLAGS = c['CFLAGS']
-cxxflags = CFLAGS + c['CXXFLAGS']
-cxxflags.gsub!(/-O\d?/, "")
-cxxflags.gsub!(/-ggdb/, "")
+cc   = "g++"
+link = "g++"
+cxx  = "g++"
 
-host = c['host']
+obj_ext = "o"
+lib_ext = "so"
 
-# Local directories
-SRC_DIR = "./src"
+lib_prefix = "lib"
+
+optflags   = ENV.include?("OPTFLAGS") ? ENV["OPTFLAGS"] : nil
+debugflags = ENV.include?("DEBUGFLAGS") ? ENV["DEBUGFLAGS"] : nil
+
+#-- Local directories
+
+SRC_DIR   = "./src"
 BUILD_DIR = "./build"
-LIB_DIR = "./build/lib"
-LIB2_DIR = "./build/lib2"
-OBJ_DIR = "./build/obj"
-PKG_DIR = "./pkg"
-DOC_DIR = "./build/doc"
-LDOC_DIR = "./ldoc"
+LIB_DIR   = "./build/lib"
+LIB2_DIR  = "./build/lib2"
+OBJ_DIR   = "./build/obj"
+DOC_DIR   = "./build/doc"
+LDOC_DIR  = "./ldoc"
 
 directory BUILD_DIR
 directory OBJ_DIR
 directory LIB_DIR
 directory LIB2_DIR
 
-
-ALL_SRCS = FileList["#{SRC_DIR}/*.cxx"]
-MODULE_SRCS = FileList["#{SRC_DIR}/module.cxx"]
-LOADER_SRCS = FileList["#{SRC_DIR}/loader.cxx"]
-LIB_SRCS = FileList["#{SRC_DIR}/*.cxx"] - MODULE_SRCS - LOADER_SRCS
+ALL_SRCS     = FileList["#{SRC_DIR}/*.cxx"]
+MODULE_SRCS  = FileList["#{SRC_DIR}/module.cxx"]
+LOADER_SRCS  = FileList["#{SRC_DIR}/loader.cxx"]
+LIB_SRCS     = FileList["#{SRC_DIR}/*.cxx"] - MODULE_SRCS - LOADER_SRCS
 STD_MOD_SRCS = FileList["#{SRC_DIR}/*.cxx"] - LOADER_SRCS
+
+#-- Environment specific variables
+
+host = RbConfig::CONFIG['host']
 
 if host.include? 'linux'
   
   platform = "Linux_x86"
   
-  obj_ext = "o"
-  lib_ext = "so"
-  
-  lib_dll = "libluno.#{lib_ext}"
-  loader_dll = "lualoader.uno.#{lib_ext}"
-  
-  
-  out_flag = ""
-  
-  coutflag = ""
-  optflags = "-O3 "
+  coutflag = "-o "
+  optflags = "-O3" if optflags.nil?
   cflags = "-fPIC"
-  debugflags = ""
+  debugflags = "" if debugflags.nil?
+  cxxflags = ""
+  compileflag = "-c"
   
-  cc_defs = "-fno-strict-aliasing -DUNX -DGCC -DLINUX -DCPPU_ENV=gcc3 "
+  ccdefs = "-DUNX -DGCC -DLINUX -DCPPU_ENV=gcc3 "
+  #-DHAVE_GCC_VISIBILITY_FEATURE"
   
-  flags = "#{cflags} #{optflags} #{debugflags} #{cxxflags} -o "
-  incflags = "-I. -I#{lua_include} " + "-I#{sdk_include} -I#{CPPU_INCLUDE} "
-   
-  sdk_lib = "-L#{sdk_home}/lib"
-  ure_lib = "-L#{ure_home}/lib"
+  flags = "#{cflags} #{optflags} #{debugflags} #{cxxflags} -fno-strict-aliasing -Wall "
+  incflags = "-I. -I#{lua_include} -I#{sdk_include} -I#{CPPU_INCLUDE} "
+  
+  link_flags = "-shared"
+  out_flag = "-o "
+  lib_ldflags = ""
+  libflag = "-L"
+  
+  sdk_lib = "#{libflag}#{sdk_home}/lib"
+  ure_lib = "#{libflag}#{ure_home}/lib"
   
   sdk_libs = " -luno_cppuhelpergcc3 -luno_cppu -luno_salhelpergcc3 -luno_sal -lm "
-  ldflags = c['LDFLAGS']
-  lib_ldflags = ""
-  link_flags = "-shared -o "
+  ldflags = "-rdynamic -Wl,-export-dynamic"
   
-  uno_link_flags = "'-Wl,-rpath,$ORIGIN' -Wl,--version-script,#{sdk_home}/settings/component.uno.map"
+  uno_link_flags = "'-Wl,-rpath,$ORIGIN' " + 
+                   "-Wl,--version-script,#{sdk_home}/settings/component.uno.map"
+  #uno_link_flags = "'-Wl,-rpath,$ORIGIN'"
+  
+  #loader_cflags = "-fpic"
+  #loader_flags = "-fvisibility=hidden"
   
   LIB = ""
-  libs = "-llua"
-  if luajit
-    libs = "#{libs}jit-5.1"
-  end
+  libs = luajit ? "-lluajit-5.1" : "-llua"
   
   luno_libs = "-lluno"
-  
-  #"#{c['LIBS']} #{dldlibs}"
-  
-  lua_link_lib = "-L/home/asuka/local/lib"
   
   local_link_lib = ""
   
@@ -121,24 +130,34 @@ if host.include? 'linux'
   
   ure_types = "#{ure_home}/share/misc/types.rdb"
   
+  lua_lib = "libluajit-5.1.#{lib_ext}.2"
+  #lua_lib = "liblua.#{lib_ext}"
+  
 elsif host.include? 'mswin'
   
   platform = "Windows"
   
+  cc = "cl"
+  link = "link"
+  cxx = "cl"
+  
   obj_ext = "obj"
   lib_ext = "dll"
+  lib_prefix = ""
   
   lib_dll = "luno.#{lib_ext}"
-  loader_dll = "lualoader.uno.#{lib_ext}"
   
   out_flag = "/OUT:"
   
   coutflag = "/Fo"
-  optflags = "/O3"
-  cflags = "/MD /Zi /EHsc /Zm600 /Zc:forScope,wchar_t- -wd4251 -wd4275 -wd4290 -wd4675 -wd4786 -wd4800 -Zc:forScope"
-  debugflags = ""
+  optflags = "/Ob2" if optflags.nil?
+  cflags = "/MD /Zi /EHsc /Zm600 /Zc:forScope,wchar_t- " + 
+           "-wd4251 -wd4275 -wd4290 -wd4675 -wd4786 -wd4800 -Zc:forScope"
+  debugflags = "" if debugflags.nil?
+  cxxflags = ""
+  compileflag = "/c"
   
-  cc_defs = "-DWIN32 -DWNT -D_DLL -DCPPU_V=msci -DCPPU_ENV=msci"
+  ccdefs = "-DWIN32 -DWNT -D_DLL -DCPPU_V=msci -DCPPU_ENV=msci"
   
   flags = "#{cflags} #{optflags} #{debugflags} #{cxxflags} /OUT:"
   incflags = "/I. /I./include /I#{sdk_include} /I#{CPPU_INCLUDE}"
@@ -146,22 +165,19 @@ elsif host.include? 'mswin'
   sdk_lib = "/LIBPATH:#{sdk_home}/lib"
   ure_lib = ""
   
-  sdk_libs = "icppuhelper.lib icppu.lib isal.lib isalhelper.lib msvcprt.lib msvcrt.lib kernel32.lib"
+  sdk_libs = "icppuhelper.lib icppu.lib isal.lib isalhelper.lib " + 
+             "msvcprt.lib msvcrt.lib kernel32.lib"
   ldflags = " /DLL /NODEFAULTLIB:library /DEBUGTYPE:cv "
   lib_ldflags = ""
   link_flags = ""
+  libflag = "/LIBPATH:"
   
   uno_link_flags = "/DEF:#{sdk_home}/settings/component.uno.def"
   
   LIB = ""
-  libs = "lua.lib"
-  if luajit
-	libs = "#{libs}jit-5.1"
-  end
+  libs = luajit ? "luajit.lib" : "lua.lib"
   
   luno_libs = "luno.lib"
-  
-  lua_link_lib = "/LIBPATH:"
   
   local_link_lib = ""
   
@@ -169,32 +185,35 @@ elsif host.include? 'mswin'
   LINK_SWITCH = "/LIBPATH:"
   
   ure_types = "#{ure_home}/misc/types.rdb"
+  
+  cat = "type"
+  lua_exe = "luajit.exe"
+  lua_lib = "lua51.#{lib_ext}"
 end
 
+#-- Common settings
 
+lib_dll    = "#{lib_prefix}luno.#{lib_ext}"
 MODULE_DLL = "luno.#{lib_ext}"
+loader_dll = "lualoader.uno.#{lib_ext}"
 
-
-ALL_OBJS = ALL_SRCS.ext(obj_ext)
-MODULE_OBJS = MODULE_SRCS.ext(obj_ext)
-LOADER_OBJS = LOADER_SRCS.ext(obj_ext)
-LIB_OBJS = LIB_SRCS.ext(obj_ext)
+ALL_OBJS     = ALL_SRCS.ext(obj_ext)
+MODULE_OBJS  = MODULE_SRCS.ext(obj_ext)
+LOADER_OBJS  = LOADER_SRCS.ext(obj_ext)
+LIB_OBJS     = LIB_SRCS.ext(obj_ext)
 STD_MOD_OBJS = STD_MOD_SRCS.ext(obj_ext)
 
 CLEAN.include(ALL_OBJS)
-#CLEAN.include(MODULE_OBJS)
-#CLEAN.include(LIB_OBJS)
-#CLEAN.include(STD_MOD_OBJS)
+
+#-- Tasks
 
 rule ".#{obj_ext}" => '.cxx' do |t|
-  sh "#{cc} #{incflags} #{cc_defs} #{flags} " + 
-     "#{coutflag}#{t.name} -c #{t.source} "
+  sh "#{cc} #{flags} #{ccdefs} #{incflags} " + 
+     "#{coutflag}#{t.name} #{compileflag} #{t.source} "
 end
 
 task :default => [:all]
-task :all => [
-  :ext, 
-]
+task :all => [:ext]
 
 
 types = [
@@ -231,26 +250,26 @@ types = [
 desc "generate headers"
 task :header do
   if types.length > 0
-  unless File.exists?(CPPUMAKER_FLAG)
-    puts "flag for cppumaker does not exist. starting cppumaker..."
-    
-    office_types = "#{base_path}/offapi.rdb"
-    sh "#{CPPUMAKER} -Gc -BUCR -O#{CPPU_INCLUDE} -T\"#{types.join(';')}\" \"#{ure_types}\" \"#{office_types}\""
-    sh "echo > #{CPPUMAKER_FLAG}"
-  end
+    unless File.exists?(CPPUMAKER_FLAG)
+      puts "flag for cppumaker does not exist. starting cppumaker..."
+      office_types = "#{base_path}/offapi.rdb"
+      sh "#{CPPUMAKER} -Gc -BUCR -O#{CPPU_INCLUDE} " + 
+         "-T\"#{types.join(';')}\" \"#{ure_types}\" \"#{office_types}\""
+      sh "echo > #{CPPUMAKER_FLAG}"
+    end
   end
 end
 
 task :luno => [*MODULE_OBJS]  do
   sh "#{link} #{link_flags} #{out_flag}#{LIB_DIR}/#{MODULE_DLL} #{ALL_OBJS.join(' ')} " + 
-     " #{LIB} #{local_link_lib} #{module_ldflags} #{lua_link_lib} " + 
+     " #{LIB} #{local_link_lib} #{module_ldflags} #{libflag}#{lua_link_lib} " + 
      " #{sdk_lib} #{ure_lib}" + 
      " #{sdk_libs} #{libs} "
 end
 
 task :luno_std_mod => [*STD_MOD_OBJS] do
   sh "#{link} #{link_flags} #{out_flag}#{LIB_DIR}/#{MODULE_DLL} #{STD_MOD_OBJS.join(' ')} " + 
-     " #{LIB} #{local_link_lib} #{module_ldflags} #{lua_link_lib} " + 
+     " #{LIB} #{local_link_lib} #{module_ldflags} #{libflag}#{lua_link_lib} " + 
      " #{sdk_lib} #{ure_lib}" + 
      " #{sdk_libs} #{libs} "
 end
@@ -258,7 +277,7 @@ end
 task :ext => [:header, :luno_std_mod]
 
 
-## src package for LuaRocks
+#-- src package for LuaRocks
 
 ROCK_VERSION = `cat "VERSION.rock"`
 ROCK_DIR = "luno-#{ROCK_VERSION}"
@@ -299,71 +318,97 @@ end
 TEMPLATE_MANIFEST = <<EOD
 <?xml version="1.0" encoding="UTF-8"?>
 <manifest:manifest>
-<manifest:file-entry manifest:full-path="${LOADER}" 
- manifest:media-type="${MEDIA_TYPE}"/>
+  <manifest:file-entry manifest:full-path="${FULL_PATH}" 
+   manifest:media-type="${MEDIA_TYPE}"/>
 </manifest:manifest>
 EOD
 
 TEMPLATE_COMPONENTS = <<EOD
 <?xml version="1.0" encoding="UTF-8"?>
 <components xmlns="http://openoffice.org/2010/uno-components">
-<component loader="${LOADER_NAME}" uri="${URI}">
-<implementation name="${IMPLE_NAME}">
-${SERVICES}
-</implementation>
-</component>
+  <component loader="${LOADER_NAME}" uri="${URI}">
+    <implementation name="${IMPLE_NAME}">
+      ${SERVICES}
+    </implementation>
+  </component>
 </components>
 EOD
 
 TEMPLATE_DESCRIPTION = <<EOD
 <?xml version="1.0" encoding="UTF-8"?>
 <description xmlns="http://openoffice.org/extensions/description/2006"
-xmlns:xlink="http://www.w3.org/1999/xlink"
-xmlns:d="http://openoffice.org/extensions/description/2006">
-<identifier value="${ID}"/>
-<version value="${VERSION}"/>
-<dependencies>
-<OpenOffice.org-minimal-version value="${TARGET}" d:name="OpenOffice.org ${TARGET}"/>
-</dependencies>
-<!--
-<registration>
-<simple-license accept-by="admin" default-license-id="this" suppress-on-update="true">
-<license-text xlink:href="LICENSE" license-id="this"/>
-</simple-license>
-</registration>
--->
-<display-name>
-<name lang="en">${DISPLAY_NAME}</name>
-</display-name>
-<extension-description>
-<src lang="en" xlink:href="descriptions/desc.en"/>
-</extension-description>
+             xmlns:xlink="http://www.w3.org/1999/xlink"
+             xmlns:d="http://openoffice.org/extensions/description/2006">
+  <identifier value="${ID}"/>
+  <version value="${VERSION}"/>
+  <dependencies>
+    <OpenOffice.org-minimal-version value="${TARGET}" d:name="OpenOffice.org ${TARGET}"/>
+  </dependencies>
+  <registration>
+    <simple-license accept-by="admin" default-license-id="this" suppress-on-update="true">
+      <license-text xlink:href="LICENSE" license-id="this"/>
+    </simple-license>
+  </registration>
+  <display-name>
+    <name lang="en">${DISPLAY_NAME}</name>
+  </display-name>
+  <extension-description>
+    <src lang="en" xlink:href="descriptions/desc.en"/>
+  </extension-description>
+  <update-information>
+    <src xlink:href="${REPOSITORY_BASE}${FEED}.update.xml"/>
+  </update-information>
 </description>
 EOD
 
+TEMPLATE_FEED = <<EOD
+<?xml version="1.0" encoding="UTF-8"?>
+<description xmlns="http://openoffice.org/extensions/update/2006"
+             xmlns:xlink="http://www.w3.org/1999/xlink"
+             xmlns:d="http://openoffice.org/extensions/description/2006">
+  <identifier value="${ID}"/>
+  <version value="${VERSION}"/>
+  <dependencies>
+    <d:OpenOffice.org-minimal-version value="${TARGET}" d:name="OpenOffice.org ${TARGET}"/>
+  </dependencies>
+  <update-download>
+    <src xlink:href="${REPOSITORY_BASE}${PKG_NAME}"/>
+  </update-download>
+</description>
+EOD
+
+def update_feed_task(path, id, target, version, pkg_name)
+  data = String.new TEMPLATE_FEED
+  data.gsub!(/\$\{ID\}/, id)
+  data.gsub!(/\$\{VERSION\}/, version)
+  data.gsub!(/\$\{TARGET\}/, target)
+  data.gsub!(/\$\{PKG_NAME\}/, pkg_name)
+  data.gsub!(/\$\{REPOSITORY_BASE\}/, REPOSITORY_BASE)
+  open(path, "w") do |f|
+    f.write(data)
+    f.flush
+  end
+end
+
 # Creates description.xml
-def description_task(dir_path, id, target, display_name)
-  description_file = "#{dir_path}/description.xml"
+def description_task(path, id, target, display_name, version, feedname)
   data = String.new TEMPLATE_DESCRIPTION
   data.gsub!(/\$\{ID\}/, id)
-  data.gsub!(/\$\{VERSION\}/, VERSION)
+  data.gsub!(/\$\{VERSION\}/, version)
   data.gsub!(/\$\{TARGET\}/, target)
   data.gsub!(/\$\{DISPLAY_NAME\}/, display_name)
-  open(description_file, "w") do |f|
+  data.gsub!(/\$\{REPOSITORY_BASE\}/, REPOSITORY_BASE)
+  data.gsub!(/\$\{FEED\}/, feedname)
+  open(path, "w") do |f|
     f.write(data)
     f.flush
   end
 end
 
 # Creates META-INF/manifest.xml
-def manifest_task(dir_path, full_path, media_type)
-  
-  manifest_file = "#{dir_path}/META-INF/manifest.xml"
-  manifest_dir = File.dirname(manifest_file)
-  mkdir_p manifest_dir unless File.exist?(manifest_dir)
-    
+def manifest_task(manifest_file, full_path, media_type)
   data = String.new TEMPLATE_MANIFEST
-  data.gsub!(/\$\{LOADER\}/, full_path)
+  data.gsub!(/\$\{FULL_PATH\}/, full_path)
   data.gsub!(/\$\{MEDIA_TYPE\}/, media_type)
   open(manifest_file, "w") do |f|
     f.write(data)
@@ -372,10 +417,8 @@ def manifest_task(dir_path, full_path, media_type)
 end
 
 # Creates components.component
-def registration_task(dir_path, file_name, loader_name, uri, imple_name, services)
-  puts "registration"
-  components_f = "#{dir_path}/lib/#{file_name}"
-  
+def registration_task(path, file_name, loader_name, uri, imple_name, services)
+  #puts "registration"
   data = String.new TEMPLATE_COMPONENTS
   data.gsub!(/\$\{LOADER_NAME\}/, loader_name)
   data.gsub!(/\$\{URI\}/, uri)
@@ -384,7 +427,7 @@ def registration_task(dir_path, file_name, loader_name, uri, imple_name, service
     "<service name=\"#{name}\"/>"
   end
   data.gsub!(/\$\{SERVICES\}/, services.join("\n"))
-  open(components_f, "w") do |f|
+  open(path, "w") do |f|
     f.write(data)
     f.flush
   end
@@ -392,8 +435,7 @@ end
 
 
 # Creates description/desc.en
-def extension_description_task(dir_path, desc)
-  path = "#{dir_path}/descriptions/desc.en"
+def extension_description_task(path, desc)
   desc_dir = File.dirname(path)
   mkdir_p desc_dir unless File.exist?(desc_dir)
   open(path, "w") do |f|
@@ -406,43 +448,75 @@ end
 # Pack as zip archive
 def packaging_task(dir_path, pkg_name)
   chdir dir_path do
-    sh "#{ZIP} -9 -r -o ../#{pkg_name} * **/*"
+    sh "#{ZIP} #{ZIP_ARGS} -r -o ../#{pkg_name} * **/*"
   end
 end
 
 ### Loader package
 
-LOADER_PKG_NAME = "LuaLoader"
+LOADER_VERSION = `cat "VERSION.loader"`
+
+LOADER_PKG_NAME         = "LuaLoader"
 LOADER_PKG_DISPLAY_NAME = "Lua Loader"
-LOADER_PKG_ID = "mytools.loader.Lua"
-LOADER_PKG_DESC = "The UNO component loader written in Lua."
+LOADER_PKG_ID           = "mytools.loader.Lua"
+LOADER_PKG_DESC         = "The UNO component loader written in Lua."
 
-LOADER_REGISTRATION = "LuaLoader.components"
-LOADER_IMPLE_NAME = "mytools.loader.Lua"
+LOADER_REGISTRATION  = "LuaLoader.components"
+LOADER_IMPLE_NAME    = "mytools.loader.Lua"
 LOADER_SERVICE_NAMES = ["com.sun.star.loader.Lua"]
-LOADER_LUA = "lualoader.lua"
+LOADER_LUA           = "lualoader.lua"
+LOADER_MEDIA_TYPE    = "application/vnd.sun.star.uno-components;platform=#{platform}"
 
-LOADER_PKG_DIR_NAME = "#{LOADER_PKG_NAME}-#{VERSION}"
-LOADER_PKG_FULL_NAME = "#{LOADER_PKG_NAME}-#{VERSION}.#{OXT_EXT}"
-LOADER_PKG_DIR = "#{BUILD_DIR}/#{LOADER_PKG_NAME}-#{VERSION}"
-LOADER_PKG = "#{BUILD_DIR}/#{LOADER_PKG_FULL_NAME}"
+LOADER_PKG_DIR_NAME  = "#{LOADER_PKG_NAME}-#{LOADER_VERSION}"
+LOADER_PKG_FULL_NAME = "#{LOADER_PKG_NAME}-#{LOADER_VERSION}.#{OXT_EXT}"
+LOADER_PKG_DIR       = "#{BUILD_DIR}/#{LOADER_PKG_NAME}-#{LOADER_VERSION}"
+LOADER_PKG           = "#{BUILD_DIR}/#{LOADER_PKG_FULL_NAME}"
 
-LOADER_PKG_DIR_LIB = "#{LOADER_PKG_DIR}/lib"
+LOADER_PKG_DIR_LIB  = "#{LOADER_PKG_DIR}/libs"
 LOADER_LIB_LUNO_DLL = "#{LIB2_DIR}/#{lib_dll}"
-LOADER_MODULE_DLL = "#{LIB2_DIR}/#{MODULE_DLL}"
-LOADER_LIB_DLL = "#{LIB2_DIR}/#{loader_dll}"
+LOADER_MODULE_DLL   = "#{LIB2_DIR}/#{MODULE_DLL}"
+LOADER_LIB_DLL      = "#{LIB2_DIR}/#{loader_dll}"
+
+UNO_LUA = "uno.lua"
 
 directory LOADER_PKG_DIR
 directory LOADER_PKG_DIR_LIB
 
 task :loader => [:header, LOADER_PKG]
 
+LOADER_PKG_REGISTRATION = "#{LOADER_PKG_DIR_LIB}/#{LOADER_REGISTRATION}"
+LOADER_PKG_MANIFEST     = "#{LOADER_PKG_DIR}/META-INF/manifest.xml"
+LOADER_PKG_DESCRIPTION  = "#{LOADER_PKG_DIR}/description.xml"
+LOADER_PKG_EXT_DESC     = "#{LOADER_PKG_DIR}/descriptions/desc.en"
+
+LOADER_PKG_LIB          = "#{LOADER_PKG_DIR_LIB}/#{lib_dll}"
+LOADER_PKG_MODULE       = "#{LOADER_PKG_DIR_LIB}/#{MODULE_DLL}"
+LOADER_PKG_LOADER       = "#{LOADER_PKG_DIR_LIB}/#{loader_dll}"
+LOADER_PKG_LOADER_LUA   = "#{LOADER_PKG_DIR_LIB}/#{LOADER_LUA}"
+LOADER_PKG_UNO          = "#{LOADER_PKG_DIR_LIB}/#{UNO_LUA}"
+
+LOADER_PKG_README       = "#{LOADER_PKG_DIR}/README"
+LOADER_PKG_COPYRIGHT    = "#{LOADER_PKG_DIR}/LICENSE"
+
+exe_name = lua_exe.match(/^[^-]*/)
+LOADER_LUA_EXE  = "#{LOADER_PKG_DIR}/bin/#{exe_name}"
+#LOADER_LUA_EXE  = "#{LOADER_PKG_DIR}/bin/#{lua_exe}"
+LOADER_LUA_LIB  = "#{LOADER_PKG_DIR_LIB}/#{lua_lib}"
+LOADER_LUA_LIBS = "#{LOADER_PKG_DIR}/jit"
+
+LOADER_UPDATE_FEED = "#{BUILD_DIR}/#{LOADER_PKG_NAME}.update.xml"
+
+directory "#{LOADER_PKG_DIR}/META-INF"
+directory "#{LOADER_PKG_DIR}/descriptions"
+directory "#{LOADER_PKG_DIR}/bin"
+directory "#{LOADER_PKG_DIR}/jit"
+
 
 desc "create libluno library"
 file LOADER_LIB_LUNO_DLL => [LIB2_DIR, *LIB_OBJS] do |t|
   sh "#{link} #{link_flags} #{out_flag}#{t.name} #{LIB_OBJS.join(' ')} " +
      " #{LIB} #{lib_ldflags} " +
-     " #{sdk_lib} #{ure_lib} #{lua_link_lib}" +
+     " #{sdk_lib} #{ure_lib} #{libflag}#{lua_link_lib}" +
      " #{sdk_libs} #{libs} "
   if host.include? 'mswin'
     sh "#{mt} -manifest #{t.name}.manifest -outputresource:#{t.name};2"
@@ -451,10 +525,10 @@ end
 
 desc "luno.so for loader"
 file LOADER_MODULE_DLL => [LIB2_DIR, *MODULE_OBJS, "#{LIB2_DIR}/#{lib_dll}"] do |t|
-  p "building luno.so"
+  #p "building luno.so"
   sh "#{link} #{link_flags} #{out_flag}#{LIB2_DIR}/#{MODULE_DLL} #{MODULE_OBJS.join(' ')} " +
      " #{LIB} #{local_link_lib} #{module_ldflags} " +
-     " #{sdk_lib} #{ure_lib} #{LINK_SWITCH}#{LIB2_DIR} #{lua_link_lib}" +
+     " #{sdk_lib} #{ure_lib} #{LINK_SWITCH}#{LIB2_DIR} #{libflag}#{lua_link_lib}" +
      " #{sdk_libs} #{libs} #{luno_libs}"
   if host.include? 'mswin'
     sh "#{mt} -manifest #{t.name}.manifest -outputresource:#{t.name};2"
@@ -464,62 +538,122 @@ end
 
 desc "create loader component"
 file LOADER_LIB_DLL => [LIB2_DIR, *LOADER_OBJS] do |t|
-  p "building loader"
+  #p "building loader"
   sh "#{link} #{link_flags} #{out_flag}#{LIB2_DIR}/#{loader_dll} #{LOADER_OBJS.join(' ')} " +
      " #{LIB} #{local_link_lib} #{ldflags} #{uno_link_flags}" +
-     " #{sdk_lib} #{ure_lib} #{LINK_SWITCH}#{LIB2_DIR} #{lua_link_lib} " +
+     " #{sdk_lib} #{ure_lib} #{LINK_SWITCH}#{LIB2_DIR} #{libflag}#{lua_link_lib} " +
      " #{sdk_libs} #{libs}  #{luno_libs} "
   if host.include? 'mswin'
     sh "#{mt} -manifest #{t.name}.manifest -outputresource:#{t.name};2"
   end
 end
 
-
-file LOADER_PKG => [LOADER_PKG_DIR, "#{LOADER_PKG_DIR}/lib", LOADER_LIB_LUNO_DLL, LOADER_MODULE_DLL, LOADER_LIB_DLL] do |t|
-  
-  dir_path = t.name.sub(/.oxt$/, "")
-  media_type = "application/vnd.sun.star.uno-components;platform=#{platform}"
-      "#{LIB2_DIR}/#{loader_dll}"
-  full_path = "lib/#{LOADER_REGISTRATION}"
-  
-  registration_task(dir_path, LOADER_REGISTRATION,
+file LOADER_PKG_REGISTRATION => [LOADER_PKG_DIR, LOADER_PKG_DIR_LIB] do |t|
+  registration_task(t.name, LOADER_REGISTRATION,
       "com.sun.star.loader.SharedLibrary", loader_dll,
       LOADER_IMPLE_NAME, LOADER_SERVICE_NAMES)
-  manifest_task(dir_path, full_path, media_type)
-  description_task(dir_path, LOADER_PKG_ID, target, LOADER_PKG_DISPLAY_NAME)
-  extension_description_task(dir_path, LOADER_PKG_DESC)
-  
-  cp "#{LOADER_LIB_LUNO_DLL}", "#{LOADER_PKG_DIR_LIB}/#{lib_dll}"
-  cp "#{LOADER_MODULE_DLL}", "#{LOADER_PKG_DIR_LIB}/#{MODULE_DLL}"
-  cp "#{LOADER_LIB_DLL}", "#{LOADER_PKG_DIR_LIB}/#{loader_dll}"
-  
-  cp "#{SRC_DIR}/#{LOADER_LUA}", "#{LOADER_PKG_DIR_LIB}/#{LOADER_LUA}"
-  #cp "#{SRC_DIR}/#{UNO_RB}", "#{LOADER_PKG_DIR_LIB}/#{LIB_RB}"
-  
-  packaging_task dir_path, File.basename(t.name)
+end
+
+file LOADER_PKG_MANIFEST => [LOADER_PKG_DIR, "#{LOADER_PKG_DIR}/META-INF"] do |t|
+  manifest_task(t.name, "libs/#{LOADER_REGISTRATION}", LOADER_MEDIA_TYPE)
+end
+
+file LOADER_PKG_DESCRIPTION => [LOADER_PKG_DIR] do |t|
+  description_task(t.name, LOADER_PKG_ID, TARGET_VERSION, 
+                   LOADER_PKG_DISPLAY_NAME, LOADER_VERSION, LOADER_PKG_NAME)
+end
+
+file LOADER_PKG_EXT_DESC => [LOADER_PKG_DIR, "#{LOADER_PKG_DIR}/descriptions"] do |t|
+  extension_description_task(t.name, LOADER_PKG_DESC)
+end
+
+file LOADER_PKG_LIB => [LOADER_LIB_LUNO_DLL, LOADER_PKG_DIR_LIB] do |t|
+  cp t.prerequisites[0], t.name
+end
+
+file LOADER_PKG_MODULE => [LOADER_MODULE_DLL, LOADER_PKG_DIR_LIB] do |t|
+  cp t.prerequisites[0], t.name
+end
+
+file LOADER_PKG_LOADER => [LOADER_LIB_DLL, LOADER_PKG_DIR_LIB] do |t|
+  cp t.prerequisites[0], t.name
+end
+
+file LOADER_PKG_LOADER_LUA => ["#{SRC_DIR}/#{LOADER_LUA}", LOADER_PKG_DIR_LIB] do |t|
+  cp t.prerequisites[0], t.name
+end
+
+file LOADER_PKG_UNO => ["#{SRC_DIR}/#{UNO_LUA}", LOADER_PKG_DIR_LIB] do |t|
+  cp t.prerequisites[0], t.name
+end
+
+file LOADER_PKG_README => ["./README.loader"] do |t|
+  cp t.prerequisites[0], t.name
+end
+
+file LOADER_PKG_COPYRIGHT => ["./LICENSE", "#{LUA_DIR}/COPYRIGHT"] do |t|
+  sh "#{cat} #{t.prerequisites.join(' ')} > #{t.name}"
+end
+
+file LOADER_LUA_EXE => ["#{LUA_DIR}/installed/bin/#{lua_exe}", "#{LOADER_PKG_DIR}/bin"] do |t|
+  #cp t.prerequisites[0], t.name
+  exe_name = lua_exe.match(/^[^-]*/)
+  cp t.prerequisites[0], "#{File.dirname(t.name)}/#{exe_name}"
+  if not host.include?('mswin')
+    sh "chmod a+x #{File.dirname(t.name)}/#{exe_name}"
+    #sh "ln -sf #{t.name} #{File.dirname(t.name)}/luajit"
+  end
+end
+
+file LOADER_LUA_LIB => ["#{LUA_DIR}/installed/lib/#{lua_lib}", LOADER_PKG_DIR_LIB] do |t|
+  cp t.prerequisites[0], t.name
+  #cp "#{LUA_DIR}/lib/libluajit-5.1.so.2", "#{LOADER_PKG_DIR_LIB}/libluajit-5.1.so.2"
+  #cp "#{LUA_DIR}/lib/libluajit-5.1.so.2.0.0", "#{LOADER_PKG_DIR_LIB}/libluajit-5.1.so.2.0.0"
+end
+
+file LOADER_LUA_LIBS => ["#{LUA_DIR}/lib", LOADER_PKG_DIR] do |t|
+  cp Dir.glob(t.prerequisites[0] + "/*"), t.name
+end
+
+file LOADER_UPDATE_FEED => [BUILD_DIR] do |t|
+  update_feed_task(t.name, LOADER_PKG_ID, TARGET_VERSION, LOADER_VERSION, LOADER_PKG_FULL_NAME)
+end
+
+
+file LOADER_PKG => [LOADER_PKG_DIR, 
+                    LOADER_PKG_LIB, LOADER_PKG_MODULE, LOADER_PKG_LOADER, 
+                    LOADER_PKG_LOADER_LUA, LOADER_PKG_UNO, 
+                    LOADER_PKG_REGISTRATION, LOADER_PKG_MANIFEST, LOADER_PKG_DESCRIPTION, 
+                    LOADER_PKG_EXT_DESC, LOADER_PKG_README, LOADER_PKG_COPYRIGHT, 
+                    LOADER_LUA_EXE, LOADER_LUA_LIB, LOADER_LUA_LIBS, 
+                    LOADER_UPDATE_FEED] do |t|
+  packaging_task t.name.sub(/.oxt$/, ""), File.basename(t.name)
 end
 
 
 ### Script provider package
 
-SCRIPT_PKG_NAME = "LuaScriptProvider"
+SCRIPT_VERSION = `cat "VERSION.script"`
+
+SCRIPT_PKG_NAME         = "LuaScriptProvider"
 SCRIPT_PKG_DISPLAY_NAME = "Lua Script Provider"
-SCRIPT_PACKAGE_ID = "mytools.script.provider.ScriptProviderForLua"
+SCRIPT_PACKAGE_ID       = "mytools.script.provider.ScriptProviderForLua"
 
 SCRIPT_REGISTRATION = "ScriptProviderForLua.components"
-SCRIPT_DESC = "The script provider for Lua."
-SCRIPT_IMPLE_NAME = "mytools.script.provider.ScriptProviderForLua"
+SCRIPT_DESC         = "The script provider for Lua."
+SCRIPT_IMPLE_NAME   = "mytools.script.provider.ScriptProviderForLua"
 SCRIPT_SERVICE_NAMES = [
   "com.sun.star.script.provider.ScriptProviderForLua",
   "com.sun.star.script.provider.LanguageScriptProvider"]
-SCRIPT_RB = "luascript.lua"
+SCRIPT_LUA = "luascript.lua"
+SCRIPT_MEDIA_TYPE = "application/vnd.sun.star.uno-components"
 
-SCRIPT_PKG_DIR_NAME = "#{SCRIPT_PKG_NAME}-#{VERSION}"
-SCRIPT_PKG_FULL_NAME = "#{SCRIPT_PKG_NAME}-#{VERSION}.#{OXT_EXT}"
-SCRIPT_PKG_DIR = "#{BUILD_DIR}/#{SCRIPT_PKG_DIR_NAME}"
-SCRIPT_PKG = "#{BUILD_DIR}/#{SCRIPT_PKG_FULL_NAME}"
+SCRIPT_PKG_DIR_NAME  = "#{SCRIPT_PKG_NAME}-#{SCRIPT_VERSION}"
+SCRIPT_PKG_FULL_NAME = "#{SCRIPT_PKG_NAME}-#{SCRIPT_VERSION}.#{OXT_EXT}"
+SCRIPT_PKG_DIR       = "#{BUILD_DIR}/#{SCRIPT_PKG_DIR_NAME}"
+SCRIPT_PKG           = "#{BUILD_DIR}/#{SCRIPT_PKG_FULL_NAME}"
 
-SCRIPT_PKG_DIR_LIB = "#{SCRIPT_PKG_DIR}/lib"
+SCRIPT_PKG_DIR_LIB = "#{SCRIPT_PKG_DIR}/libs"
 
 directory SCRIPT_PKG_DIR
 directory SCRIPT_PKG_DIR_LIB
@@ -527,23 +661,67 @@ directory SCRIPT_PKG_DIR_LIB
 task :provider => [SCRIPT_PKG]
 
 
-file SCRIPT_PKG => [SCRIPT_PKG_DIR, SCRIPT_PKG_DIR_LIB] do |t|
-  dir_path = t.name.sub(/.oxt$/, "")
-  media_type = "application/vnd.sun.star.uno-components"
-  
-  registration_task(dir_path, SCRIPT_REGISTRATION,
-      "com.sun.star.loader.Lua", SCRIPT_RB,
+SCRIPT_PKG_REGISTRATION = "#{SCRIPT_PKG_DIR_LIB}/#{SCRIPT_REGISTRATION}"
+SCRIPT_PKG_MANIFEST     = "#{SCRIPT_PKG_DIR}/META-INF/manifest.xml"
+SCRIPT_PKG_DESCRIPTION  = "#{SCRIPT_PKG_DIR}/description.xml"
+SCRIPT_PKG_EXT_DESC     = "#{SCRIPT_PKG_DIR}/descriptions/desc.en"
+SCRIPT_PKG_SCRIPT_LUA   = "#{SCRIPT_PKG_DIR_LIB}/#{SCRIPT_LUA}"
+
+SCRIPT_PKG_README       = "#{SCRIPT_PKG_DIR}/README"
+SCRIPT_PKG_COPYRIGHT    = "#{SCRIPT_PKG_DIR}/LICENSE"
+
+SCRIPT_UPDATE_FEED      = "#{BUILD_DIR}/#{SCRIPT_PKG_NAME}.update.xml"
+
+directory "#{SCRIPT_PKG_DIR}/META-INF"
+directory "#{SCRIPT_PKG_DIR}/descriptions"
+
+
+file SCRIPT_PKG_REGISTRATION => [SCRIPT_PKG_DIR, SCRIPT_PKG_DIR_LIB] do |t|
+  registration_task(t.name, SCRIPT_REGISTRATION,
+      "com.sun.star.loader.Lua", SCRIPT_LUA,
       SCRIPT_IMPLE_NAME, SCRIPT_SERVICE_NAMES)
-  manifest_task(dir_path, "lib/#{SCRIPT_REGISTRATION}", media_type)
-  description_task(dir_path, SCRIPT_PACKAGE_ID, target, SCRIPT_PKG_DISPLAY_NAME)
-  extension_description_task(dir_path, SCRIPT_DESC)
-  
-  cp "#{SRC_DIR}/#{SCRIPT_RB}", "#{SCRIPT_PKG_DIR_LIB}/#{SCRIPT_RB}"
-  
-  packaging_task dir_path, File.basename(t.name)
+end
+
+file SCRIPT_PKG_MANIFEST => [SCRIPT_PKG_DIR, "#{SCRIPT_PKG_DIR}/META-INF"] do |t|
+  manifest_task(t.name, "libs/#{SCRIPT_REGISTRATION}", SCRIPT_MEDIA_TYPE)
+end
+
+file SCRIPT_PKG_DESCRIPTION => [SCRIPT_PKG_DIR] do |t|
+  description_task(t.name, SCRIPT_PACKAGE_ID, TARGET_VERSION, 
+                SCRIPT_PKG_DISPLAY_NAME, SCRIPT_VERSION, SCRIPT_PKG_NAME)
+end
+
+file SCRIPT_PKG_EXT_DESC => [SCRIPT_PKG_DIR, "#{SCRIPT_PKG_DIR}/descriptions"] do |t|
+  extension_description_task(t.name, SCRIPT_DESC)
+end
+
+file SCRIPT_PKG_SCRIPT_LUA => ["#{SRC_DIR}/#{SCRIPT_LUA}", 
+                                SCRIPT_PKG_DIR, SCRIPT_PKG_DIR_LIB] do |t|
+  cp t.prerequisites[0], t.name
+end
+
+file SCRIPT_PKG_README => ["./README.script"] do |t|
+  cp t.prerequisites[0], t.name
+end
+
+file SCRIPT_PKG_COPYRIGHT => ["./LICENSE"] do |t|
+  cp t.prerequisites[0], t.name
+end
+
+file SCRIPT_UPDATE_FEED => [BUILD_DIR] do |t|
+  update_feed_task(t.name, SCRIPT_PACKAGE_ID, TARGET_VERSION, SCRIPT_VERSION, SCRIPT_PKG_FULL_NAME)
 end
 
 
+file SCRIPT_PKG => [SCRIPT_PKG_DIR, SCRIPT_PKG_DIR_LIB, 
+                    SCRIPT_PKG_SCRIPT_LUA, SCRIPT_PKG_REGISTRATION, 
+                    SCRIPT_PKG_EXT_DESC, SCRIPT_PKG_DESCRIPTION, SCRIPT_PKG_MANIFEST, 
+                    SCRIPT_PKG_README, SCRIPT_PKG_COPYRIGHT, 
+                    SCRIPT_UPDATE_FEED] do |t|
+  packaging_task t.name.sub(/.oxt$/, ""), File.basename(t.name)
+end
+
+=begin
 ### Documents
 
 LDOCS = FileList["#{LDOC_DIR}/*.md"]
@@ -569,9 +747,7 @@ file "#{DOC_DIR}/ipc.html" => "#{LDOC_DIR}/ipc.md"
 
 
 #file HTML_DOCS => LOCS
-=begin
-file "#{DOC_DIR}/index.html" => "#{LDOC_DIR}/index.md" do |t|
-=end
+
 HTML_DOCS.zip(LDOCS).each do |h, m|
   #sh "pandoc #{t.prerequisites[0]} -f markdown -t html -c ./ldoc.css -T LUNO" + 
   #   " > #{t.name}"
@@ -590,7 +766,4 @@ desc "Generates documents"
 task :ldocs => [DOC_DIR, "#{DOC_DIR}/ldoc.css", *HTML_DOCS]
 #[DOC_DIR, "#{DOC_DIR}/index.html"]
 #[*HTML_DOCS]
-
-
-
-
+=end
