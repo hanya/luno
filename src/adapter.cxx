@@ -6,11 +6,13 @@
 #include <cppuhelper/typeprovider.hxx>
 
 #include <com/sun/star/beans/MethodConcept.hpp>
+#include <com/sun/star/beans/XMaterialHolder.hpp>
 #include <com/sun/star/reflection/ParamMode.hpp>
 
 using com::sun::star::beans::UnknownPropertyException;
 using com::sun::star::beans::XIntrospectionAccess;
 
+using namespace com::sun::star::beans;
 using namespace com::sun::star::lang;
 using namespace com::sun::star::reflection;
 using namespace com::sun::star::script;
@@ -249,15 +251,21 @@ Any LunoAdapter::invoke(const OUString &aName, const Sequence< Any > &aParams,
                     LunoAdapted *p = luno_proxy_getudata(L, -1, LUNO_META_STRUCT);
                     if (p != NULL && p->Wrapped.getValueTypeClass() == TypeClass_EXCEPTION)
                     {
-                        lua_settop(L, top);
-                        Exception e;
-                        p->Wrapped >>= e;
-                        throw InvocationTargetException(e.Message, 
-                                    Reference< XInterface >(), p->Wrapped);
+                        Reference< XMaterialHolder > xMaterialHolder(
+                                            p->xInvocation, UNO_QUERY);
+                        if (xMaterialHolder.is())
+                        {
+                            Exception e;
+                            xMaterialHolder->getMaterial() >>= e;
+                            lua_settop(L, top);
+                            throw InvocationTargetException(e.Message, 
+                                        Reference< XInterface >(), xMaterialHolder->getMaterial());
+                        }
                     }
                 }
                 size_t length;
                 const char *message = lua_tolstring(L, -1, &length);
+                lua_settop(L, top);
                 throw RuntimeException(OUString(message, length, RTL_TEXTENCODING_UTF8), 
                             Reference< XInterface >());
             }
