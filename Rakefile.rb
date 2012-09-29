@@ -219,6 +219,7 @@ task :all => [:ext]
 types = [
   "com.sun.star.uno.TypeClass", 
   "com.sun.star.beans.XIntrospection", 
+  "com.sun.star.beans.XMaterialHolder", 
   "com.sun.star.beans.XPropertySet", 
   "com.sun.star.beans.MethodConcept", 
   "com.sun.star.beans.PropertyConcept", 
