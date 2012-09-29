@@ -85,7 +85,8 @@ host = RbConfig::CONFIG['host']
 
 if host.include? 'linux'
   
-  platform = "Linux_x86"
+  platform = "Linux"
+  platform += "_" + (host.include?('x86_64') ? 'x86_64' : 'x86')
   
   coutflag = "-o "
   optflags = "-O3" if optflags.nil?
@@ -190,6 +191,8 @@ elsif host.include? 'mswin'
   lua_exe = "luajit.exe"
   lua_lib = "lua51.#{lib_ext}"
 end
+
+platform.downcase!
 
 #-- Common settings
 
@@ -342,6 +345,7 @@ TEMPLATE_DESCRIPTION = <<EOD
              xmlns:d="http://openoffice.org/extensions/description/2006">
   <identifier value="${ID}"/>
   <version value="${VERSION}"/>
+  <platform value="${PLATFORM}"/>
   <dependencies>
     <OpenOffice.org-minimal-version value="${TARGET}" d:name="OpenOffice.org ${TARGET}"/>
   </dependencies>
@@ -369,6 +373,7 @@ TEMPLATE_FEED = <<EOD
              xmlns:d="http://openoffice.org/extensions/description/2006">
   <identifier value="${ID}"/>
   <version value="${VERSION}"/>
+  <platform value="${PLATFORM}"/>
   <dependencies>
     <d:OpenOffice.org-minimal-version value="${TARGET}" d:name="OpenOffice.org ${TARGET}"/>
   </dependencies>
@@ -378,10 +383,11 @@ TEMPLATE_FEED = <<EOD
 </description>
 EOD
 
-def update_feed_task(path, id, target, version, pkg_name)
+def update_feed_task(path, id, target, version, pkg_name, platform)
   data = String.new TEMPLATE_FEED
   data.gsub!(/\$\{ID\}/, id)
   data.gsub!(/\$\{VERSION\}/, version)
+  data.gsub!(/\$\{PLATFORM\}/, platform)
   data.gsub!(/\$\{TARGET\}/, target)
   data.gsub!(/\$\{PKG_NAME\}/, pkg_name)
   data.gsub!(/\$\{REPOSITORY_BASE\}/, REPOSITORY_BASE)
@@ -392,10 +398,11 @@ def update_feed_task(path, id, target, version, pkg_name)
 end
 
 # Creates description.xml
-def description_task(path, id, target, display_name, version, feedname)
+def description_task(path, id, target, display_name, version, feedname, platform)
   data = String.new TEMPLATE_DESCRIPTION
   data.gsub!(/\$\{ID\}/, id)
   data.gsub!(/\$\{VERSION\}/, version)
+  data.gsub!(/\$\{PLATFORM\}/, platform)
   data.gsub!(/\$\{TARGET\}/, target)
   data.gsub!(/\$\{DISPLAY_NAME\}/, display_name)
   data.gsub!(/\$\{REPOSITORY_BASE\}/, REPOSITORY_BASE)
@@ -436,7 +443,7 @@ end
 
 
 # Creates description/desc.en
-def extension_description_task(path, desc)
+def package_description_task(path, desc)
   desc_dir = File.dirname(path)
   mkdir_p desc_dir unless File.exist?(desc_dir)
   open(path, "w") do |f|
@@ -468,10 +475,11 @@ LOADER_SERVICE_NAMES = ["com.sun.star.loader.Lua"]
 LOADER_LUA           = "lualoader.lua"
 LOADER_MEDIA_TYPE    = "application/vnd.sun.star.uno-components;platform=#{platform}"
 
-LOADER_PKG_DIR_NAME  = "#{LOADER_PKG_NAME}-#{LOADER_VERSION}"
-LOADER_PKG_FULL_NAME = "#{LOADER_PKG_NAME}-#{LOADER_VERSION}.#{OXT_EXT}"
-LOADER_PKG_DIR       = "#{BUILD_DIR}/#{LOADER_PKG_NAME}-#{LOADER_VERSION}"
+LOADER_PKG_DIR_NAME  = "#{LOADER_PKG_NAME}-#{platform}-#{LOADER_VERSION}"
+LOADER_PKG_FULL_NAME = "#{LOADER_PKG_DIR_NAME}.#{OXT_EXT}"
+LOADER_PKG_DIR       = "#{BUILD_DIR}/#{LOADER_PKG_DIR_NAME}"
 LOADER_PKG           = "#{BUILD_DIR}/#{LOADER_PKG_FULL_NAME}"
+LOADER_PKG_PLATFORM  = "#{LOADER_PKG_NAME}-#{platform}"
 
 LOADER_PKG_DIR_LIB  = "#{LOADER_PKG_DIR}/libs"
 LOADER_LIB_LUNO_DLL = "#{LIB2_DIR}/#{lib_dll}"
@@ -505,7 +513,7 @@ LOADER_LUA_EXE  = "#{LOADER_PKG_DIR}/bin/#{exe_name}"
 LOADER_LUA_LIB  = "#{LOADER_PKG_DIR_LIB}/#{lua_lib}"
 LOADER_LUA_LIBS = "#{LOADER_PKG_DIR}/jit"
 
-LOADER_UPDATE_FEED = "#{BUILD_DIR}/#{LOADER_PKG_NAME}.update.xml"
+LOADER_UPDATE_FEED = "#{BUILD_DIR}/#{LOADER_PKG_PLATFORM}.update.xml"
 
 directory "#{LOADER_PKG_DIR}/META-INF"
 directory "#{LOADER_PKG_DIR}/descriptions"
@@ -561,11 +569,11 @@ end
 
 file LOADER_PKG_DESCRIPTION => [LOADER_PKG_DIR] do |t|
   description_task(t.name, LOADER_PKG_ID, TARGET_VERSION, 
-                   LOADER_PKG_DISPLAY_NAME, LOADER_VERSION, LOADER_PKG_NAME)
+                   LOADER_PKG_DISPLAY_NAME, LOADER_VERSION, LOADER_PKG_PLATFORM, platform)
 end
 
 file LOADER_PKG_EXT_DESC => [LOADER_PKG_DIR, "#{LOADER_PKG_DIR}/descriptions"] do |t|
-  extension_description_task(t.name, LOADER_PKG_DESC)
+  package_description_task(t.name, LOADER_PKG_DESC)
 end
 
 file LOADER_PKG_LIB => [LOADER_LIB_LUNO_DLL, LOADER_PKG_DIR_LIB] do |t|
@@ -617,7 +625,7 @@ file LOADER_LUA_LIBS => ["#{LUA_DIR}/lib", LOADER_PKG_DIR] do |t|
 end
 
 file LOADER_UPDATE_FEED => [BUILD_DIR] do |t|
-  update_feed_task(t.name, LOADER_PKG_ID, TARGET_VERSION, LOADER_VERSION, LOADER_PKG_FULL_NAME)
+  update_feed_task(t.name, LOADER_PKG_ID, TARGET_VERSION, LOADER_VERSION, LOADER_PKG_FULL_NAME, platform)
 end
 
 
@@ -689,11 +697,11 @@ end
 
 file SCRIPT_PKG_DESCRIPTION => [SCRIPT_PKG_DIR] do |t|
   description_task(t.name, SCRIPT_PACKAGE_ID, TARGET_VERSION, 
-                SCRIPT_PKG_DISPLAY_NAME, SCRIPT_VERSION, SCRIPT_PKG_NAME)
+                SCRIPT_PKG_DISPLAY_NAME, SCRIPT_VERSION, SCRIPT_PKG_NAME, "all")
 end
 
 file SCRIPT_PKG_EXT_DESC => [SCRIPT_PKG_DIR, "#{SCRIPT_PKG_DIR}/descriptions"] do |t|
-  extension_description_task(t.name, SCRIPT_DESC)
+  package_description_task(t.name, SCRIPT_DESC)
 end
 
 file SCRIPT_PKG_SCRIPT_LUA => ["#{SRC_DIR}/#{SCRIPT_LUA}", 
@@ -710,7 +718,7 @@ file SCRIPT_PKG_COPYRIGHT => ["./LICENSE"] do |t|
 end
 
 file SCRIPT_UPDATE_FEED => [BUILD_DIR] do |t|
-  update_feed_task(t.name, SCRIPT_PACKAGE_ID, TARGET_VERSION, SCRIPT_VERSION, SCRIPT_PKG_FULL_NAME)
+  update_feed_task(t.name, SCRIPT_PACKAGE_ID, TARGET_VERSION, SCRIPT_VERSION, SCRIPT_PKG_FULL_NAME, "all")
 end
 
 
