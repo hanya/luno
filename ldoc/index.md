@@ -13,7 +13,7 @@ module, please read first three contents.
 * [Basics](./luno.md)
 * [IPC](./ipc.md)
 * [Install](./install.md)
-* [Macro](./macro.md)
+* [Macros](./macros.md)
 * [Components](./components.md)
 
 ## Reference
