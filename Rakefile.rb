@@ -81,13 +81,18 @@ STD_MOD_SRCS = FileList["#{SRC_DIR}/*.cxx"] - LOADER_SRCS
 
 #-- Environment specific variables
 
-host = RbConfig::CONFIG['host']
+if ENV['HOST']
+  host = ENV['HOST']
+else
+  host = RbConfig::CONFIG['host']
+end
 
 if host.include? 'linux'
   
   platform = "Linux"
   platform += "_" + (host.include?('x86_64') ? 'x86_64' : 'x86')
   
+  psep = "/"
   coutflag = "-o "
   optflags = "-O3" if optflags.nil?
   cflags = "-fPIC"
@@ -133,20 +138,23 @@ if host.include? 'linux'
   
   lua_lib = "libluajit-5.1.#{lib_ext}.2"
   #lua_lib = "liblua.#{lib_ext}"
+  lua_lib_dir_prefix = "lib"
   
 elsif host.include? 'mswin'
   
-  platform = "Windows"
+  platform = "Windows_x86"
   
+  psep = "\\"
   cc = "cl"
   link = "link"
   cxx = "cl"
+  mt = "mt -nologo "
   
   obj_ext = "obj"
   lib_ext = "dll"
-  lib_prefix = ""
+  lib_prefix = "lib"
   
-  lib_dll = "luno.#{lib_ext}"
+  #lib_dll = "luno.#{lib_ext}"
   
   out_flag = "/OUT:"
   
@@ -160,25 +168,27 @@ elsif host.include? 'mswin'
   
   ccdefs = "-DWIN32 -DWNT -D_DLL -DCPPU_V=msci -DCPPU_ENV=msci"
   
-  flags = "#{cflags} #{optflags} #{debugflags} #{cxxflags} /OUT:"
-  incflags = "/I. /I./include /I#{sdk_include} /I#{CPPU_INCLUDE}"
+  flags = "#{cflags} #{optflags} #{debugflags} #{cxxflags} "
+  incflags = "/I. /I#{lua_include} /I#{sdk_include} /I#{CPPU_INCLUDE}"
   
   sdk_lib = "/LIBPATH:#{sdk_home}/lib"
   ure_lib = ""
   
+  libluno_def = "#{SRC_DIR}/libluno.def"
+  
   sdk_libs = "icppuhelper.lib icppu.lib isal.lib isalhelper.lib " + 
              "msvcprt.lib msvcrt.lib kernel32.lib"
   ldflags = " /DLL /NODEFAULTLIB:library /DEBUGTYPE:cv "
-  lib_ldflags = ""
-  link_flags = ""
+  lib_ldflags = " #{ldflags} /MAP /DEF:#{libluno_def} "
+  link_flags = "/DLL"
   libflag = "/LIBPATH:"
   
   uno_link_flags = "/DEF:#{sdk_home}/settings/component.uno.def"
   
   LIB = ""
-  libs = luajit ? "luajit.lib" : "lua.lib"
+  libs = luajit ? "lua51.lib" : "lua.lib"
   
-  luno_libs = "luno.lib"
+  luno_libs = "libluno.lib"
   
   local_link_lib = ""
   
@@ -190,6 +200,7 @@ elsif host.include? 'mswin'
   cat = "type"
   lua_exe = "luajit.exe"
   lua_lib = "lua51.#{lib_ext}"
+  lua_lib_dir_prefix = "bin"
 end
 
 platform.downcase!
@@ -283,7 +294,7 @@ task :ext => [:header, :luno_std_mod]
 
 #-- src package for LuaRocks
 
-ROCK_VERSION = `cat "VERSION.rock"`
+ROCK_VERSION = `#{cat} "VERSION.rock"`
 ROCK_DIR = "luno-#{ROCK_VERSION}"
 ROCK_NAME = "#{ROCK_DIR}.rockspec"
 
@@ -304,8 +315,8 @@ task :rock => [:header, ] do
   sh "chdir #{BUILD_DIR} && tar czvpf #{ROCK_DIR}.tar.gz #{ROCK_DIR}/"
   sh "md5sum #{BUILD_DIR}/#{ROCK_DIR}.tar.gz > #{BUILD_DIR}/md5-#{ROCK_VERSION}.txt"
   
-  md5 = `cat "#{BUILD_DIR}/md5-#{ROCK_VERSION}.txt"`
-  data = `cat "rockspec.template"`
+  md5 = `#{cat} "#{BUILD_DIR}/md5-#{ROCK_VERSION}.txt"`
+  data = `#{cat} "rockspec.template"`
   data.gsub!("##VERSION##", ROCK_VERSION)
   data.gsub!("##MD5##", md5.split(" ")[0])
   open("#{BUILD_DIR}/luno-#{ROCK_VERSION}.rockspec", "w") do |f|
@@ -462,7 +473,7 @@ end
 
 ### Loader package
 
-LOADER_VERSION = `cat "VERSION.loader"`
+LOADER_VERSION = `#{cat} "VERSION.loader"`
 
 LOADER_PKG_NAME         = "LuaLoader"
 LOADER_PKG_DISPLAY_NAME = "Lua Loader"
@@ -512,6 +523,10 @@ LOADER_LUA_EXE  = "#{LOADER_PKG_DIR}/bin/#{exe_name}"
 #LOADER_LUA_EXE  = "#{LOADER_PKG_DIR}/bin/#{lua_exe}"
 LOADER_LUA_LIB  = "#{LOADER_PKG_DIR_LIB}/#{lua_lib}"
 LOADER_LUA_LIBS = "#{LOADER_PKG_DIR}/jit"
+LOADER_LUA_INCLUDE = "#{LOADER_PKG_DIR}/include"
+
+LUA_INCLUDES = ["lua.h", "lualib.h", "lua.hpp"]
+LUA_INCLUDES << "luajit.h" if luajit
 
 LOADER_UPDATE_FEED = "#{BUILD_DIR}/#{LOADER_PKG_PLATFORM}.update.xml"
 
@@ -519,6 +534,7 @@ directory "#{LOADER_PKG_DIR}/META-INF"
 directory "#{LOADER_PKG_DIR}/descriptions"
 directory "#{LOADER_PKG_DIR}/bin"
 directory "#{LOADER_PKG_DIR}/jit"
+directory "#{LOADER_PKG_DIR}/include"
 
 
 desc "create libluno library"
@@ -533,7 +549,8 @@ file LOADER_LIB_LUNO_DLL => [LIB2_DIR, *LIB_OBJS] do |t|
 end
 
 desc "luno.so for loader"
-file LOADER_MODULE_DLL => [LIB2_DIR, *MODULE_OBJS, "#{LIB2_DIR}/#{lib_dll}"] do |t|
+#file LOADER_MODULE_DLL => [LIB2_DIR, *MODULE_OBJS, "#{LIB2_DIR}/#{lib_dll}"] do |t|
+file LOADER_MODULE_DLL => [LIB2_DIR, "#{LOADER_LIB_LUNO_DLL}", *MODULE_OBJS] do |t|
   #p "building luno.so"
   sh "#{link} #{link_flags} #{out_flag}#{LIB2_DIR}/#{MODULE_DLL} #{MODULE_OBJS.join(' ')} " +
      " #{LIB} #{local_link_lib} #{module_ldflags} " +
@@ -600,8 +617,10 @@ file LOADER_PKG_README => ["./README.loader"] do |t|
   cp t.prerequisites[0], t.name
 end
 
-file LOADER_PKG_COPYRIGHT => ["./LICENSE", "#{LUA_DIR}/COPYRIGHT"] do |t|
-  sh "#{cat} #{t.prerequisites.join(' ')} > #{t.name}"
+file LOADER_PKG_COPYRIGHT => [".#{psep}LICENSE", "#{LUA_DIR}#{psep}COPYRIGHT"] do |t|
+  #sh "#{cat} #{t.prerequisites.join(' ')} > #{t.name}"
+  sh "#{cat} #{t.prerequisites[0]} >> #{t.name}"
+  sh "#{cat} #{t.prerequisites[1]} >> #{t.name}"
 end
 
 file LOADER_LUA_EXE => ["#{LUA_DIR}/installed/bin/#{lua_exe}", "#{LOADER_PKG_DIR}/bin"] do |t|
@@ -614,7 +633,8 @@ file LOADER_LUA_EXE => ["#{LUA_DIR}/installed/bin/#{lua_exe}", "#{LOADER_PKG_DIR
   end
 end
 
-file LOADER_LUA_LIB => ["#{LUA_DIR}/installed/lib/#{lua_lib}", LOADER_PKG_DIR_LIB] do |t|
+file LOADER_LUA_LIB => ["#{LUA_DIR}/installed/#{lua_lib_dir_prefix}/#{lua_lib}", 
+                        LOADER_PKG_DIR_LIB] do |t|
   cp t.prerequisites[0], t.name
   #cp "#{LUA_DIR}/lib/libluajit-5.1.so.2", "#{LOADER_PKG_DIR_LIB}/libluajit-5.1.so.2"
   #cp "#{LUA_DIR}/lib/libluajit-5.1.so.2.0.0", "#{LOADER_PKG_DIR_LIB}/libluajit-5.1.so.2.0.0"
@@ -622,6 +642,12 @@ end
 
 file LOADER_LUA_LIBS => ["#{LUA_DIR}/lib", LOADER_PKG_DIR] do |t|
   cp Dir.glob(t.prerequisites[0] + "/*"), t.name
+end
+
+file LOADER_LUA_INCLUDE => ["#{LUA_DIR}"] do |t|
+  LUA_INCLUDES.each do |t|
+    cp "#{LUA_DIR}/src/#{t}", "#{LOADER_LUA_INCLUDE}/#{t}"
+  end
 end
 
 file LOADER_UPDATE_FEED => [BUILD_DIR] do |t|
@@ -634,7 +660,7 @@ file LOADER_PKG => [LOADER_PKG_DIR,
                     LOADER_PKG_LOADER_LUA, LOADER_PKG_UNO, 
                     LOADER_PKG_REGISTRATION, LOADER_PKG_MANIFEST, LOADER_PKG_DESCRIPTION, 
                     LOADER_PKG_EXT_DESC, LOADER_PKG_README, LOADER_PKG_COPYRIGHT, 
-                    LOADER_LUA_EXE, LOADER_LUA_LIB, LOADER_LUA_LIBS, 
+                    LOADER_LUA_EXE, LOADER_LUA_LIB, LOADER_LUA_LIBS, LOADER_LUA_INCLUDE, 
                     LOADER_UPDATE_FEED] do |t|
   packaging_task t.name.sub(/.oxt$/, ""), File.basename(t.name)
 end
@@ -642,7 +668,7 @@ end
 
 ### Script provider package
 
-SCRIPT_VERSION = `cat "VERSION.script"`
+SCRIPT_VERSION = `#{cat} "VERSION.script"`
 
 SCRIPT_PKG_NAME         = "LuaScriptProvider"
 SCRIPT_PKG_DISPLAY_NAME = "Lua Script Provider"
