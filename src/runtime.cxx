@@ -584,7 +584,7 @@ Any Runtime::luaToAny(lua_State *L, int index) const throw (RuntimeException)
                 if (luno_get_udata_type(L, index) != LUNO_TYPE_UNDEFINED)
                 {
                     TypeClass tc = p->Wrapped.getValueTypeClass();
-                    if (tc == TypeClass_STRUCT or tc == TypeClass_EXCEPTION)
+                    if (tc == TypeClass_STRUCT || tc == TypeClass_EXCEPTION)
                     {
                         Reference< XMaterialHolder > xMaterialHolder(
                                 ((LunoAdapted *)p)->xInvocation, UNO_QUERY);
