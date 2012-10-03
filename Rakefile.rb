@@ -525,7 +525,7 @@ LOADER_LUA_LIB  = "#{LOADER_PKG_DIR_LIB}/#{lua_lib}"
 LOADER_LUA_LIBS = "#{LOADER_PKG_DIR}/jit"
 LOADER_LUA_INCLUDE = "#{LOADER_PKG_DIR}/include"
 
-LUA_INCLUDES = ["lua.h", "lualib.h", "lua.hpp"]
+LUA_INCLUDES = ["lua.h", "lualib.h", "luaconf.h", "lua.hpp"]
 LUA_INCLUDES << "luajit.h" if luajit
 
 LOADER_UPDATE_FEED = "#{BUILD_DIR}/#{LOADER_PKG_PLATFORM}.update.xml"
@@ -618,18 +618,19 @@ file LOADER_PKG_README => ["./README.loader"] do |t|
 end
 
 file LOADER_PKG_COPYRIGHT => [".#{psep}LICENSE", "#{LUA_DIR}#{psep}COPYRIGHT"] do |t|
-  #sh "#{cat} #{t.prerequisites.join(' ')} > #{t.name}"
   sh "#{cat} #{t.prerequisites[0]} >> #{t.name}"
   sh "#{cat} #{t.prerequisites[1]} >> #{t.name}"
 end
 
 file LOADER_LUA_EXE => ["#{LUA_DIR}/installed/bin/#{lua_exe}", "#{LOADER_PKG_DIR}/bin"] do |t|
-  #cp t.prerequisites[0], t.name
   exe_name = lua_exe.match(/^[^-]*/)
   cp t.prerequisites[0], "#{File.dirname(t.name)}/#{exe_name}"
   if not host.include?('mswin')
     sh "chmod a+x #{File.dirname(t.name)}/#{exe_name}"
     #sh "ln -sf #{t.name} #{File.dirname(t.name)}/luajit"
+  end
+  if host.include? 'mswin'
+    cp "#{LUA_DIR}/installed/#{lua_lib_dir_prefix}/#{lua_lib}", "#{LOADER_PKG_DIR}/bin/#{lua_lib}"
   end
 end
 
@@ -638,10 +639,15 @@ file LOADER_LUA_LIB => ["#{LUA_DIR}/installed/#{lua_lib_dir_prefix}/#{lua_lib}",
   cp t.prerequisites[0], t.name
   #cp "#{LUA_DIR}/lib/libluajit-5.1.so.2", "#{LOADER_PKG_DIR_LIB}/libluajit-5.1.so.2"
   #cp "#{LUA_DIR}/lib/libluajit-5.1.so.2.0.0", "#{LOADER_PKG_DIR_LIB}/libluajit-5.1.so.2.0.0"
+  if host.include? 'mswin'
+    d = "#{LUA_DIR}/src/#{lua_lib}"
+    cp d.gsub(/\.[^.]+$/, ".lib"), t.name.gsub(/\.[^.]+$/, ".lib")
+	cp d.gsub(/\.[^.]+$/, ".exp"), t.name.gsub(/\.[^.]+$/, ".exp")
+  end
 end
 
-file LOADER_LUA_LIBS => ["#{LUA_DIR}/lib", LOADER_PKG_DIR] do |t|
-  cp Dir.glob(t.prerequisites[0] + "/*"), t.name
+file LOADER_LUA_LIBS => ["#{LUA_DIR}#{psep}lib", LOADER_PKG_DIR] do |t|
+  cp Dir.glob((t.prerequisites[0] + "#{psep}*").gsub(psep, "/")), t.name
 end
 
 file LOADER_LUA_INCLUDE => ["#{LUA_DIR}"] do |t|
