@@ -5,7 +5,9 @@
 * [Requirements](#requirements)
 * [Build with LuaRocks](#build-with-luarocks)
 * [Install with LuaRocks](#install-with-luarocks)
-* [Build Loader and Script Provider](#build-loader-and-script-provider)
+* [Build Loader](#build-loader-and-script-provider)
+* [Build Script Provider](#build-script-provider)
+* [Install Loader and Script Provider](#install-loader-and-script-provider)
 
 ## Requirements
 
@@ -46,9 +48,29 @@ install it with install command.
 
     luarocks build luno-version-environment.rock
 
-## Build Loader and Script Provider
+## Build Loader
 
 This section does not a part of LuaRocks.
 
     > source ~/openoffice.org3.4_sdk/host_name/setsdkenv_unix.sh
-    > rake
+    > rake loader LUA_DIR=path_to_lua_dir
+
+Build Lua or LuaJIT as follows and specify as LUA_DIR:
+
+    > make
+    > make install PREFIX=path_to_build_dir/installed
+
+HOST should be specified with non mswin Rake on Windows: 
+
+    > rake loader LUA_DIR=path_to_lua_dir HOST=mswin
+
+## Build Script Provider
+
+Packing only.
+
+    > rake provider
+
+## Install Loader and Script Provider
+
+Install the package for LuaLoader first through the extension manager. 
+Then restart the office and then install the ProviderForLua package next.
