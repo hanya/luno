@@ -65,58 +65,61 @@ Start the office or start the office in your script of connecting to the office.
 
 Here is an example to connect to the office with specific parameters:
 
-    local function connect(data, bridgename)
-        local description, protocol, object
-        if type(data) == "string" then
-            if data:sub(1, 4) == "uno:" then data = data:sub(5) end
-            description, protocol, object = data:match("^([^;]*);([^;]*);([^;]*)$")
-            if not description or not protocol or not object then
-                error("Illegal UNO URL: " .. tostring(data)) end
-            if not bridgename then bridgename = "" end
-        elseif type(data) ~= "table" then
-            data = {type = "pipe", name = "luapipe", 
-                    protocol = "urp", object = "StarOffice.ComponentContext"}
-         -- data = {type = "socket", host = "localhost", port = 2002, 
-         --         protocol = "urp", object = "StarOffice.ComponentContext"}
-        end
-        if type(data) == "table" then
-            local function get(tbl, name, default)
-                if tbl[name] == nil then return default else return tbl[name] end
-            end
-            
-            local contype = get(data, "type", "pipe")
-            if contype == "pipe" then
-                description = "pipe,name=" .. tostring(get(data, "name", "luapipe"))
-            elseif contype == "socket" then
-                description = "socket,host=" .. tostring(get(data, "host", "localhost")) .. 
-                              "port=" .. tostring(get(data, "port", 2002))
-            else
-                error("Unknown connection type: " .. tostring(contype))
-            end
-            protocol = get(data, "protocol", "urp")
-            object = get(data, "object", "StarOffice.ComponentContext")
-            bridgename = get(data, "bridgename", "")
+```lua
+local function connect(data, bridgename)
+    local description, protocol, object
+    if type(data) == "string" then
+        if data:sub(1, 4) == "uno:" then data = data:sub(5) end
+        description, protocol, object = data:match("^([^;]*);([^;]*);([^;]*)$")
+        if not description or not protocol or not object then
+            error("Illegal UNO URL: " .. tostring(data)) end
+        if not bridgename then bridgename = "" end
+    elseif type(data) ~= "table" then
+        data = {type = "pipe", name = "luapipe", 
+                protocol = "urp", object = "StarOffice.ComponentContext"}
+     -- data = {type = "socket", host = "localhost", port = 2002, 
+     --         protocol = "urp", object = "StarOffice.ComponentContext"}
+    end
+    if type(data) == "table" then
+        local function get(tbl, name, default)
+            if tbl[name] == nil then return default else return tbl[name] end
         end
         
-        local local_ctx = uno.getcontext()
-        local local_smgr = local_ctx:getServiceManager()
-        local connector = local_smgr:createInstanceWithContext(
-                                "com.sun.star.connection.Connector", local_ctx)
-        local connection = connector:connect(description)
-        local factory = local_smgr:createInstanceWithContext(
-                                "com.sun.star.bridge.BridgeFactory", local_ctx)
-        local bridge = factory:createBridge(bridgename, protocol, connection, nil)
-        return bridge:getInstance(object)
+        local contype = get(data, "type", "pipe")
+        if contype == "pipe" then
+            description = "pipe,name=" .. tostring(get(data, "name", "luapipe"))
+        elseif contype == "socket" then
+            description = "socket,host=" .. tostring(get(data, "host", "localhost")) .. 
+                          "port=" .. tostring(get(data, "port", 2002))
+        else
+            error("Unknown connection type: " .. tostring(contype))
+        end
+        protocol = get(data, "protocol", "urp")
+        object = get(data, "object", "StarOffice.ComponentContext")
+        bridgename = get(data, "bridgename", "")
     end
+    
+    local local_ctx = uno.getcontext()
+    local local_smgr = local_ctx:getServiceManager()
+    local connector = local_smgr:createInstanceWithContext(
+                            "com.sun.star.connection.Connector", local_ctx)
+    local connection = connector:connect(description)
+    local factory = local_smgr:createInstanceWithContext(
+                            "com.sun.star.bridge.BridgeFactory", local_ctx)
+    local bridge = factory:createBridge(bridgename, protocol, connection, nil)
+    return bridge:getInstance(object)
+end
+```
 
 This can be used like as follows:
 
+```lua
     -- pass parameters in string, no default value is applied
     local ctx = connect "uno:pipe,name=luapipe;urp;StarOffice.ComponentContext"
     
     -- or in table, default value is used for object and protocol
     local ctx = connect{type = "socket", host = "localhost", port = 2082}
-
+```
 
 ## Local Context and Remote Context
 
@@ -137,20 +140,21 @@ at the finish of the script. Add the following statement:
 
 Using above `connect` function, here is an example to make new document:
 
-    local uno = require("uno")
-    
-    local function doc_example()
-        local ctx = connect()
-        local smgr = ctx:getServiceManager()
-        local desktop = smgr:createInstanceWithContext("com.sun.star.frame.Desktop", ctx)
-        local doc = desktop:loadComponentFromURL("private:factory/swriter", "_blank", 0, {})
-        local text = doc:getText()
-        text:setString("Hello from Lua!")
-    end
-    
-    doc_example()
-    os.exit(true)
+```lua
+local uno = require("uno")
 
+local function doc_example()
+    local ctx = connect()
+    local smgr = ctx:getServiceManager()
+    local desktop = smgr:createInstanceWithContext("com.sun.star.frame.Desktop", ctx)
+    local doc = desktop:loadComponentFromURL("private:factory/swriter", "_blank", 0, {})
+    local text = doc:getText()
+    text:setString("Hello from Lua!")
+end
+
+doc_example()
+os.exit(true)
+```
 
 ## Reference
 
