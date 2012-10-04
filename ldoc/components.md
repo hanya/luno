@@ -23,58 +23,60 @@ There is helper function provided in `uno` module.
 
 Using these methods, a component can be written as follows: 
 
-    -- job.lua
-    local uno = require("uno")
-    
-    -- As metatable
-    local JobExecutor = {}
-    JobExecutor.__index = JobExecutor
-    
-    -- Register metatable to be converted to UNO component
-    uno.asuno(JobExecutor)
-    
-    -- Prepare type information for uno.addtypeinfo method
-    JobExecutor.__unotypes = {
-        "com.sun.star.task.XJobExecutor"
-    }
-    -- Add methods in com.sun.star.lang.XTypeProvider interface
-    -- according to values in __unotypes field
-    uno.addtypeinfo(JobExecutor)
-    
-    -- Prepare service informations for uno.addserviceinfo method
-    JobExecutor.__implename = "mytools.task.TestJobExecutor"
-    JobExecutor.__servicenames = {
-        "mytools.task.TestJobExecutor", 
-    }
-    -- Add methods in com.sun.star.lang.XServiceInfo interface 
-    -- according to __implename and __servicenames fields
-    uno.addserviceinfo(JobExecutor)
-    
-    -- Instantiate component
-    -- Constructor function should take component context and 
-    -- arguments for createInstanceWithContext and 
-    -- createInstanceWithArgumentsAndContext of 
-    -- com.sun.star.lang.XSingleComponentFactory interface.
-    function JobExecutor.new(ctx, args)
-        return setmetatable({ctx = ctx, args = args}, JobExecutor)
-    end
-    
-    -- com.sun.star.task.XJobExecutor
-    function JobExecutor:trigger(event)
-        print(event)
-    end
-    
-    -- Informations about component provided by this file
-    -- IMPLEMENTATIONS variable should not be local
-    IMPLEMENTATIONS = {
-        {
-            JobExecutor.new, 
-            JobExecutor.__implename, 
-            JobExecutor.__servicenames
-        }, 
-        -- another information if there
-    }
-    return nil
+```lua
+-- job.lua
+local uno = require("uno")
+
+-- As metatable
+local JobExecutor = {}
+JobExecutor.__index = JobExecutor
+
+-- Register metatable to be converted to UNO component
+uno.asuno(JobExecutor)
+
+-- Prepare type information for uno.addtypeinfo method
+JobExecutor.__unotypes = {
+    "com.sun.star.task.XJobExecutor"
+}
+-- Add methods in com.sun.star.lang.XTypeProvider interface
+-- according to values in __unotypes field
+uno.addtypeinfo(JobExecutor)
+
+-- Prepare service informations for uno.addserviceinfo method
+JobExecutor.__implename = "mytools.task.TestJobExecutor"
+JobExecutor.__servicenames = {
+    "mytools.task.TestJobExecutor", 
+}
+-- Add methods in com.sun.star.lang.XServiceInfo interface 
+-- according to __implename and __servicenames fields
+uno.addserviceinfo(JobExecutor)
+
+-- Instantiate component
+-- Constructor function should take component context and 
+-- arguments for createInstanceWithContext and 
+-- createInstanceWithArgumentsAndContext of 
+-- com.sun.star.lang.XSingleComponentFactory interface.
+function JobExecutor.new(ctx, args)
+    return setmetatable({ctx = ctx, args = args}, JobExecutor)
+end
+
+-- com.sun.star.task.XJobExecutor
+function JobExecutor:trigger(event)
+    print(event)
+end
+
+-- Informations about component provided by this file
+-- IMPLEMENTATIONS variable should not be local
+IMPLEMENTATIONS = {
+    {
+        JobExecutor.new, 
+        JobExecutor.__implename, 
+        JobExecutor.__servicenames
+    }, 
+    -- another information if there
+}
+return nil
+```
 
 In this case, it is prepared to be registered into type registry of 
 the UNO to be instantiated by the UNO if required. The component 
@@ -98,15 +100,17 @@ The above `job.lua` file should be packed in extension package (OXT
 package). It should have additional information about to tell 
 which file contains UNO component implementations. 
 
-    <!-- LuaJobTest.components -->
-    <?xml version="1.0" encoding="UTF-8"?>
-    <components xmlns="http://openoffice.org/2010/uno-components">
-      <component loader="com.sun.star.loader.Lua" uri="job.lua">
-        <implementation name="mytools.task.LuaJobTest">
-          <service name="mytools.task.LuaJobTest"/>
-        </implementation>
-      </component>
-    </components>
+```xml
+<!-- LuaJobTest.components -->
+<?xml version="1.0" encoding="UTF-8"?>
+<components xmlns="http://openoffice.org/2010/uno-components">
+  <component loader="com.sun.star.loader.Lua" uri="job.lua">
+    <implementation name="mytools.task.LuaJobTest">
+      <service name="mytools.task.LuaJobTest"/>
+    </implementation>
+  </component>
+</components>
+```
 
 `loader` should be "com.sun.star.loader.Lua" in `components` node. 
 And `uri` specifies script file that contains component implementation. 
@@ -116,11 +120,13 @@ the code. `servicename`s should be similar.
 Place the above data into a file and it should be specified in 
 META-INF/manifest.xml file as follows:
 
-    <?xml version="1.0" encoding="UTF-8"?>
-    <manifest:manifest>
-      <manifest:file-entry manifest:full-path="LuaJobTest.components" 
-       manifest:media-type="application/vnd.sun.star.uno-components"/>
-    </manifest:manifest>
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest:manifest>
+  <manifest:file-entry manifest:full-path="LuaJobTest.components" 
+   manifest:media-type="application/vnd.sun.star.uno-components"/>
+</manifest:manifest>
+```
 
 ## Require Function
 

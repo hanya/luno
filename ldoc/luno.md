@@ -43,7 +43,9 @@ The knowledge of UNO basic required to understand well.
 
 Load the extension module with `require` function.
 
-    local uno = require("uno")
+```lua
+local uno = require("uno")
+```
 
 Current uno.lua is wrapper module for luno.so.
 
@@ -88,7 +90,9 @@ Pass ASCII 7bit or UTF-8 encoded string to UNO.
 
 The char type is a char in unicode. 
 
-    uno.Char(char)  ->  userdata
+```lua
+uno.Char(char)  ->  userdata
+```
 
 `char` is a character in string. Returns new userdata wraps char data. 
 When length of `char` is not 1, error causes.
@@ -100,7 +104,9 @@ The result is immutable.
 
 The type represents one of UNO type.
 
-    uno.Type(typename)  ->  userdata
+```lua
+uno.Type(typename)  ->  userdata
+```
 
 `typename` is one of UNO type. Returns new userdata wraps type data. 
 The sequence type can be represent with `[]`, e.g. `[]long` or `[][]string`.
@@ -111,17 +117,21 @@ The result is immutable.
 
 Here are examples:
 
-    local t = uno.Type("long")
-    local t2 = uno.Type("[]long")
-    local t3 = uno.Type("[][]double")
-    local t4 = uno.Type("com.sun.star.beans.PropertyValue")
-    local t5 = uno.Type("[]com.sun.star.beans.PropertyValue")
+```lua
+local t = uno.Type("long")
+local t2 = uno.Type("[]long")
+local t3 = uno.Type("[][]double")
+local t4 = uno.Type("com.sun.star.beans.PropertyValue")
+local t5 = uno.Type("[]com.sun.star.beans.PropertyValue")
+```
 
 ### Enum
 
 The enum is a value of enum member.
 
-    uno.Enum(typename, value)  ->  userdata
+```lua
+uno.Enum(typename, value)  ->  userdata
+```
 
 The `typename` is name of enum and `value` specifies one of the enum member name. 
 Returns new userdata wraps enum data. 
@@ -135,14 +145,18 @@ The result is immutable.
 
 The structure. First, generate constructor function as follows: 
 
-    local Size = require("com.sun.star.awt.Size")
+```lua
+local Size = require("com.sun.star.awt.Size")
+```
 
 Then new instance can be created with the functions.
 
-    local size = Size()
-    -- or with initial values
-    -- Width, Height
-    local s = Size(100, 200)
+```lua
+local size = Size()
+-- or with initial values
+-- Width, Height
+local s = Size(100, 200)
+```
 
 The function takes zero or more parameters depending of the struct definition. 
 The order of the parameters are the same with the definition of the struct. 
@@ -158,15 +172,19 @@ It has `type_name` field represents name of the struct.
 
 The member of the struct can be accessed with `.` operator.
 
-    local size = Size()
-    size.Width = 100
-    size.Height = 200
+```lua
+local size = Size()
+size.Width = 100
+size.Height = 200
+```
 
 ### Any
 
 A typed value that can be represented in UNO.
 
-    uno.Any(type, value)  ->  userdata
+```lua
+uno.Any(type, value)  ->  userdata
+```
 
 Passed `value` is converted to UNO type represented by `type`. 
 `type` can be name of UNO type in string or instance of Type. 
@@ -187,19 +205,21 @@ it converted into `[]any`, and then `execute` method of the content provider
 failed to convert the sequence of `any` to `[]com.sun.star.beans.Property`. 
 Use `uno.Seq` to make typed sequence in this case.
 
-    local Property = uno.require("com.sun.star.beans.Property")
-    local Command = uno.require("com.sun.star.task.Command")
-    local doc
-    local ucb = ctx:getServiceManager().createInstanceWithArgumentsAndContext(
-            "com.sun.star.ucb.UniversalContentBroker", {"Local", "Office"}, ctx)
-    local identifier = ucb.createContentIdentifier(uri)
-    local content = ucb.queryContent(identifier)
-    local property = Property("DocumentModel", -1, uno.Type("void"), 1)
-    local command = Command("getPropertyValues", -1, 
-                        uno.Seq("[]com.sun.star.beans.Property", {property}))
-    local commandenv = CommandEnvironment.new()
-    local resultset = content:execute(command, 0, commandenv)
-    doc = resultset:getObject(1, nil)
+```lua
+local Property = uno.require("com.sun.star.beans.Property")
+local Command = uno.require("com.sun.star.task.Command")
+local doc
+local ucb = ctx:getServiceManager().createInstanceWithArgumentsAndContext(
+        "com.sun.star.ucb.UniversalContentBroker", {"Local", "Office"}, ctx)
+local identifier = ucb.createContentIdentifier(uri)
+local content = ucb.queryContent(identifier)
+local property = Property("DocumentModel", -1, uno.Type("void"), 1)
+local command = Command("getPropertyValues", -1, 
+                    uno.Seq("[]com.sun.star.beans.Property", {property}))
+local commandenv = CommandEnvironment.new()
+local resultset = content:execute(command, 0, commandenv)
+doc = resultset:getObject(1, nil)
+```
 
 When is `Any` required? In general, most of values are correctly converted 
 into desired type. But rerely conversion failed, use it for such case. 
@@ -215,7 +235,9 @@ but it is converted to `void` by the bridge.
 
 The sequence of values.
 
-    uno.Seq(typename [, length | table])  ->  userdata
+```lua
+uno.Seq(typename [, length | table])  ->  userdata
+```
 
 Returns typed sequence specified with `typename`. `length` specifies initial length 
 of generated sequence. When `table` is passed, generated sequence initialized with its 
@@ -257,9 +279,11 @@ non-integer keys.
 
 This can be used like for table:
 
-    for k, v in pairs(seq) do
-        print(v)
-    end
+```lua
+for k, v in pairs(seq) do
+    print(v)
+end
+```
 
 `__pairs` and `__ipairs` meta functions needs Lua 5.2 to be worked.
 
@@ -273,7 +297,9 @@ This can be used like for table:
 
 Changes the size of the sequence.
 
-    uno.Seq:realloc(length)  ->  nil
+```lua
+uno.Seq:realloc(length)  ->  nil
+```
 
 When `length` is smaller than 0, error causes.
 
@@ -282,7 +308,9 @@ When `length` is smaller than 0, error causes.
 Insert an element to specific index and move elements to make a seat 
 for inserted value.
 
-    uno.Seq:insert([pos, ] value)  ->  nil
+```lua
+uno.Seq:insert([pos, ] value)  ->  nil
+```
 
 When `pos` is not specified, `value` is appended to the end of the sequence.
 When `pos` is smaller than 1, error causes. When `pos` is larger than length 
@@ -292,7 +320,9 @@ of the sequence, error causes.
 
 Remove an element specified by index and move back elements to fill the hole.
 
-    uno.Seq:remove([pos])  ->  value
+```lua
+uno.Seq:remove([pos])  ->  value
+```
 
 When `pos` is not specified, last element is removed from the sequence. And 
 returns removed value. When `pos` is smaller than 1, error causes. When 
@@ -303,13 +333,17 @@ When the sequence is empty, error causes.
 
 Convert contents into new table of Lua.
 
-    uno.Seq:totable()  ->  table
+```lua
+uno.Seq:totable()  ->  table
+```
 
 #### tostring
 
 Convert []byte contents into string.
 
-    uno.Seq:tostring()  ->  string
+```lua
+uno.Seq:tostring()  ->  string
+```
 
 `seq` must be a sequence typed as []byte. If the argument is not a sequence, 
 error causes.
@@ -318,7 +352,9 @@ error causes.
 
 Convert string to sequence represents []byte.
 
-    uno.Seq.tobytes(string)  ->  uno.Seq
+```lua
+uno.Seq.tobytes(string)  ->  uno.Seq
+```
 
 `string` is converted to sequence typed as []byte. Returns new Seq with []type. 
 
@@ -351,42 +387,50 @@ anything for user.
 If an object supports an interface, its methods and methods of its base interface 
 can be called. Use `:` syntax sugar to call method on the proxy.
 
-    local smgr = ctx:getServiceManager()
-    -- this is also allowed
-    local f = ctx.getServiceManager
-    local smgr2 = f(ctx)
+```lua
+local smgr = ctx:getServiceManager()
+-- this is also allowed
+local f = ctx.getServiceManager
+local smgr2 = f(ctx)
+```
 
 When a method has out or inout parameter, it returns multiple return values 
 in the order that real return value as first return value and then other 
 return values for out or inout parameters are follows. Here is an example 
 to call the method has out parameter:
 
-    -- long readBytes( [out] sequence< byte > data, [in] long length )
-    local b = "test text"
-    local pipe = self:create("com.sun.star.io.Pipe")
-    pipe:writeBytes(uno.Seq.tobytes(b))
-    pipe:flush()
-    pipe:closeOutput()
-    -- n takes length that really read, d takes value for data parameter
-    local n, d = pipe:readBytes(nil, 100)
-    local v = d:tostring()
-    pipe:closeInput()
+```lua
+-- long readBytes( [out] sequence< byte > data, [in] long length )
+local b = "test text"
+local pipe = self:create("com.sun.star.io.Pipe")
+pipe:writeBytes(uno.Seq.tobytes(b))
+pipe:flush()
+pipe:closeOutput()
+-- n takes length that really read, d takes value for data parameter
+local n, d = pipe:readBytes(nil, 100)
+local v = d:tostring()
+pipe:closeInput()
+```
 
 When the name of a method confluct with another method from different interface, 
 it can be specified with full qualified name as follows:
 
-    local ctx = self:getcontext()
-    local smgr = ctx:com_sun_star_uno_XComponentContext_getServiceManager()
+```lua
+local ctx = self:getcontext()
+local smgr = ctx:com_sun_star_uno_XComponentContext_getServiceManager()
+```
 
 An error "Illegal object passed" is raised, when calling a method on the object with 
 illegal object as first argument. For example: 
 
-    -- This is ok.
-    local ret1 = obj:method1()
-    -- This is wrong.
-    local ret2 = obj.method2()
-    -- It should be called with obj itself as first argument.
-    local ret3 = obj.method3(obj)
+```lua
+-- This is ok.
+local ret1 = obj:method1()
+-- This is wrong.
+local ret2 = obj.method2()
+-- It should be called with obj itself as first argument.
+local ret3 = obj.method3(obj)
+```
 
 #### Attributes
 
@@ -411,20 +455,23 @@ This is little bit slow than to call corresponding method at first time.
 UNO exception can be throwen by calling `error` function with UNO exception 
 as its argument. Here is an example to throw RuntimeException: 
 
-    local RuntimeException = uno.require("com.sun.star.uno.RuntimeException")
-    error(RuntimeException("Error message", nil))
+```lua
+local RuntimeException = uno.require("com.sun.star.uno.RuntimeException")
+error(RuntimeException("Error message", nil))
+```
 
 Exception thrown from UNO method can be trap with `pcall` method. 
 
-    local status, message = pcall(vt.testRuntimeException, vt)
-    if status then
-        -- non error
-        -- ....
-    else if message.typename == "com.sun.star.uno.RuntimeException" then
-        -- error
-        print(message.Message)
-    end
-
+```lua
+local status, message = pcall(vt.testRuntimeException, vt)
+if status then
+    -- non error
+    -- ....
+else if message.typename == "com.sun.star.uno.RuntimeException" then
+    -- error
+    print(message.Message)
+end
+```
 
 ## Import Values
 
@@ -445,24 +492,28 @@ Once a member of the module is requested as field access,
 the value is imported and set to the module field, if the request is valid. 
 The same value is imported only once on the table.
 
-    -- empty table
-    local cssawt = require("com.sun.star.awt")
-    
-    -- imported and field created
-    local FontSlant = cssawt.FontSlant
-    
-    -- FontSlant is table also and its member can be refered as its field
-    local it = FontSlant.ITALIC
-    
-    -- This is allowed but lookup happens many times.
-    local com = require("com")
-    local ITALIC = com.sun.star.awt.FontSlant.ITALIC
+```lua
+-- empty table
+local cssawt = require("com.sun.star.awt")
+
+-- imported and field created
+local FontSlant = cssawt.FontSlant
+
+-- FontSlant is table also and its member can be refered as its field
+local it = FontSlant.ITALIC
+
+-- This is allowed but lookup happens many times.
+local com = require("com")
+local ITALIC = com.sun.star.awt.FontSlant.ITALIC
+```
 
 The service can be requested to import but it is not useful if it does not have 
 well defined constructor definitions in its IDL. 
 
-    local ScriptURIHelper = uno.require("com.sun.star.script.provider.ScriptURIHelper")
-    local helper = ScriptURIHelper.create(ctx, "Python", "user")
+```lua
+local ScriptURIHelper = uno.require("com.sun.star.script.provider.ScriptURIHelper")
+local helper = ScriptURIHelper.create(ctx, "Python", "user")
+```
 
 The calling of the constructor defined in the IDL, is performed by 
 the createInstanceWithArgumentsAndContext method of 
@@ -472,8 +523,10 @@ The first argument for the constructor should be component context.
 Optionally, services defined without well defined constructor can be 
 instantiated with `create` method if they can be instantiated.
 
-    local Desktop = uno.require("com.sun.star.frame.Desktop")
-    local desktop = Desktop.create(ctx)
+```lua
+local Desktop = uno.require("com.sun.star.frame.Desktop")
+local desktop = Desktop.create(ctx)
+```
 
 When additional parameters are passed to `create` method, they are 
 passed as arguments for `createInstanceWithArgumentsAndContext` method.
@@ -486,13 +539,17 @@ Some functions are provided by the extension module.
 
 Makes absolute URL from base URL and relative path.
 
-    uno.absolutize(base, relative)  ->  string
+```lua
+uno.absolutize(base, relative)  ->  string
+```
 
 ### tourl
 
 Converts system path to URL.
 
-    uno.tourl(systempath)  ->  string
+```lua
+uno.tourl(systempath)  ->  string
+```
 
 UNO uses URL notation to specify a file even it is placed in the local file system. 
 It should be formatted with RFC 1738 or others. 
@@ -504,13 +561,17 @@ from system path. This function does not add `file://` protocol for non absolute
 
 Converts URL to system path.
 
-    uno.tosystempath(url)  ->  string
+```lua
+uno.tosystempath(url)  ->  string
+```
 
 ### uuid
 
 Generates UUID version 4 for implementation id.
 
-    uno.uuid()  ->  uno.Seq
+```lua
+uno.uuid()  ->  uno.Seq
+```
 
 Return value is new uno.Seq instance.
 
@@ -518,7 +579,9 @@ Return value is new uno.Seq instance.
 
 Returns component context and initialize extension.
 
-    uno.getcontext()  ->  userdata
+```lua
+uno.getcontext()  ->  userdata
+```
 
 On IPC, call this function before you do something with UNO.
 
@@ -526,7 +589,9 @@ On IPC, call this function before you do something with UNO.
 
 Returns something of UNO value.
 
-    uno.require(name)  ->  table | string | number | uno.Enum 
+```lua
+uno.require(name)  ->  table | string | number | uno.Enum 
+```
 
 This is substantial function of require hook. Standard `require` function has 
 some overhead to lookup somethig from local file system. This function can be used 
@@ -536,7 +601,9 @@ to load without the overhead.
 
 Returns type name of UNO values.
 
-    uno.typename(value)  ->  string
+```lua
+uno.typename(value)  ->  string
+```
 
 Standard `type` function returns name userdata for UNO values wrapped by userdata. 
 But this function can be used with them. For non userdata value, error causes. 
@@ -558,7 +625,9 @@ Other value might be returnd for value created with uno.Any depending its real c
 
 Checks object has specific UNO interface.
 
-    uno.hasinterface(obj, interface)  ->  boolean
+```lua
+uno.hasinterface(obj, interface)  ->  boolean
+```
 
 `obj` should be UnoProxy and `interface` is name of UNO interface in string. 
 If `obj` is not UnoProxy or it does not support specified interface, false is returned.
@@ -567,7 +636,9 @@ If `obj` is not UnoProxy or it does not support specified interface, false is re
 
 Lists element names of interface or struct.
 
-    uno.dir(value)  ->  table
+```lua
+uno.dir(value)  ->  table
+```
 
 `value` should be interface, struct or exception of UNO as userdata. 
 Returns list of methods, properties, attributes and fields in table.
@@ -578,7 +649,9 @@ When `value` is not userdata or it does not have `__elements` field, error cause
 
 Reads name of struct generated by constructor function of it.
 
-    uno.name(ctor)  ->  string
+```lua
+uno.name(ctor)  ->  string
+```
 
 This reads first upvalue of the passed function, so funny result returns for 
 any other functions.
@@ -589,7 +662,9 @@ When `ctor` is not function, error causes.
 
 Register the metatable of the table which is wrapped as UNO component to be passed to UNO.
 
-    uno.asuno(table [, register])  ->  table
+```lua
+uno.asuno(table [, register])  ->  table
+```
 
 `table` should be a table used as metatable and `register` specifies 
 to register or to revoke the table, default value is `true`. Returns passed table. 
@@ -609,7 +684,9 @@ class and its instantiation.
 Adds methods for com.sun.star.lang.XTypeProvider interface to metatable 
 to provides type information of UNO component from `__unotypes` field value.
 
-    uno.addtypeinfo(table)  ->  table
+```lua
+uno.addtypeinfo(table)  ->  table
+```
 
 getTypes and getImplementationId methods are added to the passed table.
 
@@ -621,17 +698,19 @@ are merged.
 
 Implementation identifier is also cached to `__unoid` field.
 
-    local ActionListener = {}
-    ActionListener.__index = ActionListener
-    ActionListener.__unotypes = {
-        "com.sun.star.awt.XActionListener"
-    }
-    uno.asuno(ActionListener)
-    uno.addtypeinfo(ActionListener)
-    
-    function ActionListener:actionPerformed(ev)
-        -- do something
-    end
+```lua
+local ActionListener = {}
+ActionListener.__index = ActionListener
+ActionListener.__unotypes = {
+    "com.sun.star.awt.XActionListener"
+}
+uno.asuno(ActionListener)
+uno.addtypeinfo(ActionListener)
+
+function ActionListener:actionPerformed(ev)
+    -- do something
+end
+```
     
 com.sun.star.lang.XTypeProvider is added too if not found.
 
@@ -641,7 +720,9 @@ Adds methods for com.sun.star.lang.XServiceInfo interface to metatable
 to provide service information of UNO component from `__implename` and 
 `__servicenames` values.
 
-    uno.addserviceinfo(table)  ->  table
+```lua
+uno.addserviceinfo(table)  ->  table
+```
 
 getImplementationName, supportsService and getSupportedServiceNames 
 methods are added to passed table.
@@ -651,64 +732,78 @@ that is almost standard interface for UNO component that is instantiated
 through com.sun.star.lang.XMultiComponentFactory. Disposable components 
 like listener or something do not nessesary the interface.
 
-    local JobExecutor = {}
-    JobExecutor.__index = JobExecutor
-    JobExecutor.__unotypes = {
-        "com.sun.star.task.XJobExecutor", 
-    }
-    JobExecutor.__implename = "mytools.task.JobExecutor"
-    JobExecutor.__servicenames = {
-        "mytools.task.JobExecutor", 
-    }
-    uno.asuno(JobExecutor)
-    
-    function JobExecutor:trigger(arg)
-        -- do something
-    end
+```lua
+local JobExecutor = {}
+JobExecutor.__index = JobExecutor
+JobExecutor.__unotypes = {
+    "com.sun.star.task.XJobExecutor", 
+}
+JobExecutor.__implename = "mytools.task.JobExecutor"
+JobExecutor.__servicenames = {
+    "mytools.task.JobExecutor", 
+}
+uno.asuno(JobExecutor)
+
+function JobExecutor:trigger(arg)
+    -- do something
+end
+```
 
 ### iterate
 
 Iterate elements in com.sun.star.container.XEnumerationAccess or XEnumeration.
 
-    uno.iterate(object)
+```lua
+uno.iterate(object)
+```
 
 `object` should be Proxy instance that supports XEnumerationAccess or XEnumeration 
 interface. Returned index is dummy, not related to elements of the container.
 
-    local fields = doc:getTextFields()
-    for _, v in uno.iterate(fields) do
-        print(v)
-    end
+```lua
+local fields = doc:getTextFields()
+for _, v in uno.iterate(fields) do
+    print(v)
+end
+```
 
 ### ipairs
 
 Iterate elements in com.sun.star.container.XIndexAccess.
 
-    uno.ipairs(object)
+```lua
+uno.ipairs(object)
+```
 
 `object` should be Proxy instance that supports XIndexAccess interface. 
 
-    local sheets = doc:getSheets()
-    for i, sheet in uno.ipairs(sheets) do
-        print(i)
-        print(sheet)
-    end
+```lua
+local sheets = doc:getSheets()
+for i, sheet in uno.ipairs(sheets) do
+    print(i)
+    print(sheet)
+end
+```
 
 ### pairs
 
 Iterate elements in com.sun.star.container.XNameAccess interface. 
 
-    uno.pairs(object)
+```lua
+uno.pairs(object)
+```
 
 `object` should be Proxy interface that supports XNameAccess interface. 
 This iteration returns only elements managed by index. Returned index is 
 starting with 0.
 
-    local sheets = doc:getSheets()
-    for name, sheet in uno.pairs(sheets) do
-        print(name)
-        print(sheet)
-    end
+```lua
+local sheets = doc:getSheets()
+for name, sheet in uno.pairs(sheets) do
+    print(name)
+    print(sheet)
+end
+```
 
 ## Implements Interfaces
 
@@ -722,66 +817,71 @@ methods of com.sun.star.lang.XTypeProvider interface are used.
 
 Here is an example to implement com.sun.star.awt.XActionListener for dialog buttons.
 
-    local ActionListener = {}
-    ActionListener.__index = ActionListener
-    -- register the metatable as 
-    uno.asuno(ActionListener)
-    
-    function ActionListener:new()
-        -- set metatable to new instance
-        return setmetatable({}, ActionListener)
-    end
-    setmetatable(ActionListener, {__call = ActionListener.new})
-    
-    -- XTypeProvider
-    function ActionListener:getType()
-        return uno.Seq("[]type", {
-            uno.Type("com.sun.star.awt.XActionListener"), 
-            uno.Type("com.sun.star.lang.XTypeClass"), 
-        })
-    end
-    
-    function ActionListener:getImplementationId()
-        return uno.uuid()
-    end
-    
-    -- XEventListener
-    function ActionListener:disposing(ev)
-        -- nil for void return value
-        -- When a method does not return any value, void is used
-        return nil
-    end
-    
-    -- XActionListener
-    function ActionListener:actionPerformed(ev)
-        print(ev)
-        return nil
-    end
+```lua
+local ActionListener = {}
+ActionListener.__index = ActionListener
+-- register the metatable as 
+uno.asuno(ActionListener)
+
+function ActionListener:new()
+    -- set metatable to new instance
+    return setmetatable({}, ActionListener)
+end
+setmetatable(ActionListener, {__call = ActionListener.new})
+
+-- XTypeProvider
+function ActionListener:getType()
+    return uno.Seq("[]type", {
+        uno.Type("com.sun.star.awt.XActionListener"), 
+        uno.Type("com.sun.star.lang.XTypeClass"), 
+    })
+end
+
+function ActionListener:getImplementationId()
+    return uno.uuid()
+end
+
+-- XEventListener
+function ActionListener:disposing(ev)
+    -- nil for void return value
+    -- When a method does not return any value, void is used
+    return nil
+end
+
+-- XActionListener
+function ActionListener:actionPerformed(ev)
+    print(ev)
+    return nil
+end
+```
 
 [`uno.addtypeinfo`](#addtypeinfo) method provides easy way to support 
 com.sun.star.lang.XTypeProvider interface on the metatable.
 
 This `ActionListener` can be used as follows:
 
-    local dp = ctx:getServiceManager():createInstanceWithArguments(
-                                "com.sun.star.awt.DialogProvider", ctx)
-    local dialog = dp:createDialog(
-            "vnd.sun.star.script:Standard.Dialog1?location=application")
-    local button1 = dialog:getControl("CommandButton1")
-    button1:addActionListener(ActionListener())
-    
-    dialog:execute()
-    dialog:dispose()
+```lua
+local dp = ctx:getServiceManager():createInstanceWithArguments(
+                            "com.sun.star.awt.DialogProvider", ctx)
+local dialog = dp:createDialog(
+        "vnd.sun.star.script:Standard.Dialog1?location=application")
+local button1 = dialog:getControl("CommandButton1")
+button1:addActionListener(ActionListener())
+
+dialog:execute()
+dialog:dispose()
+```
 
 If a method has out or inout parameter implemented, it should be returned as 
 part of multiple return values. Return real return value first and specify 
 values for out parameters in the order defined in the IDL method definition.
 
-    -- boolean testParamMode( [in] long i, [out] long v, [inout] long u );
-    
-    function bb:testParamMode(i, v, u)
-        local b = (i == 100) and (v == nil) and (u == 300)
-        return b, 400, 500
-        -- b is real return value, 400 is v and 500 is u
-    end
+```lua
+-- boolean testParamMode( [in] long i, [out] long v, [inout] long u );
 
+function bb:testParamMode(i, v, u)
+    local b = (i == 100) and (v == nil) and (u == 300)
+    return b, 400, 500
+    -- b is real return value, 400 is v and 500 is u
+end
+```

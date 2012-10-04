@@ -114,11 +114,11 @@ end
 This can be used like as follows:
 
 ```lua
-    -- pass parameters in string, no default value is applied
-    local ctx = connect "uno:pipe,name=luapipe;urp;StarOffice.ComponentContext"
-    
-    -- or in table, default value is used for object and protocol
-    local ctx = connect{type = "socket", host = "localhost", port = 2082}
+-- pass parameters in string, no default value is applied
+local ctx = connect "uno:pipe,name=luapipe;urp;StarOffice.ComponentContext"
+
+-- or in table, default value is used for object and protocol
+local ctx = connect{type = "socket", host = "localhost", port = 2082}
 ```
 
 ## Local Context and Remote Context

@@ -75,20 +75,22 @@ the file with existing file from local file system.
 
 Here are macro examples:
 
-    -- This local function is not shown in the list of macros and 
-    -- it can not be executed as macro.
-    local function greeting()
-        return "Hello!"
-    end
-    
-    -- For Writer document.
-    function test_hello()
-        -- Get current document model
-        local doc = XSCRIPTCONTEXT:getDocument()
-        local text = doc:getText()
-        text:setString(greeting())
-    end
-    -- here is the place that no one can write code with functions
+```lua
+-- This local function is not shown in the list of macros and 
+-- it can not be executed as macro.
+local function greeting()
+    return "Hello!"
+end
+
+-- For Writer document.
+function test_hello()
+    -- Get current document model
+    local doc = XSCRIPTCONTEXT:getDocument()
+    local text = doc:getText()
+    text:setString(greeting())
+end
+-- here is the place that no one can write code with functions
+```
 
 ## Packaging into Extension
 
@@ -99,10 +101,10 @@ Note the directory only contains Lua script, no other kind of scripts
 like Java, BeanShell and Python. Add entry for the directory into 
 META-INF/manifest.xml file as follows:
 
-    <?xml version="1.0" encoding="UTF-8"?>
-    <manifest:manifest xmlns:manifest="http://openoffice.org/2001/manifest">
-      <manifest:file-entry manifest:media-type="application/vnd.sun.star.framework-script"
-                           manifest:full-path="scripts/"/>
-    </manifest:manifest>
-
-
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest:manifest xmlns:manifest="http://openoffice.org/2001/manifest">
+  <manifest:file-entry manifest:media-type="application/vnd.sun.star.framework-script"
+                       manifest:full-path="scripts/"/>
+</manifest:manifest>
+```
