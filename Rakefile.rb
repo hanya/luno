@@ -308,8 +308,8 @@ task :rock => [:header, ] do
   cp ["Makefile", "Makefile.win", "LICENSE", "README.md", "VERSION.rock"], rockdir
   cp_r "#{CPPU_INCLUDE}", rockdir
   cp_r "ldoc", rockdir
-  cp_r "#{DOC_DIR}", rockdir
-  cp ["#{SRC_DIR}/uno.lua", "#{SRC_DIR}/adapter.cxx", "#{SRC_DIR}/runtime.cxx", 
+  #cp_r "#{DOC_DIR}", rockdir
+  cp ["#{SRC_DIR}/uno.lua", "#{SRC_DIR}/adapter.cxx", "#{SRC_DIR}/runtime.cxx", "#{SRC_DIR}/types.cxx", 
       "#{SRC_DIR}/module.cxx", "#{SRC_DIR}/luno.hxx", "#{SRC_DIR}/luno.def"], srcdest
   
   sh "chdir #{BUILD_DIR} && tar czvpf #{ROCK_DIR}.tar.gz #{ROCK_DIR}/"
