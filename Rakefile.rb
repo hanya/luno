@@ -33,7 +33,7 @@ sdk_include = "#{sdk_home}/include"
 
 LUA_DIR = ENV.include?("LUA_DIR") ? ENV["LUA_DIR"] : "./lua/installed"
 
-lua_exe = "luajit-2.0.0-beta10"
+lua_exe = "luajit-2.0.0"
 lua_lib = nil
 
 if ENV.include?("LUA_DIR")
@@ -646,7 +646,7 @@ file LOADER_LUA_LIB => ["#{LUA_DIR}/installed/#{lua_lib_dir_prefix}/#{lua_lib}",
   end
 end
 
-file LOADER_LUA_LIBS => ["#{LUA_DIR}#{psep}lib", LOADER_PKG_DIR] do |t|
+file LOADER_LUA_LIBS => ["#{LUA_DIR}#{psep}src#{psep}jit", LOADER_PKG_DIR] do |t|
   cp Dir.glob((t.prerequisites[0] + "#{psep}*").gsub(psep, "/")), t.name
 end
 

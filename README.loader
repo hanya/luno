@@ -5,5 +5,5 @@ This component provides way to implement UNO components in Lua.
 
 Licensed under MIT license and this contains LuaJIT, see LICENSE.
 
-Shipped LuaJIT version 2.0.0-beta10 is compiled with following options: 
+Shipped LuaJIT version 2.0.0 is compiled with following options: 
   LUAJIT_ENABLE_LUA52COMPAT
